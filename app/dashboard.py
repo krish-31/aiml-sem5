@@ -48,7 +48,7 @@ PRETTY_ROLE = {
     "domain_controller": "Domain controller", "database": "Database",
 }
 
-st.set_page_config(page_title="Attack-Path Forecaster", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="Lateralis", layout="wide")
 
 
 # ----------------------------------------------------------------------------- data
@@ -340,7 +340,7 @@ forecasts the attacker's next hop before it happens.
 """)
 
 
-st.title("🛡️ Attack-Path Forecaster")
+st.title("Lateralis")
 st.caption("Temporal graph learning for cyber attack-path forecasting and adaptive defense · Krrish Agarwal · IS353IA")
 if not MODEL.exists() or not GRAPHS.exists():
     st.error("Model or data missing. Run the generator, builder and trainer first (see README).")

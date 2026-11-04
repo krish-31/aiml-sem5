@@ -47,6 +47,6 @@ def test_errors_and_static(client):
     gid = client.get("/api/networks").json()["default"]
     assert client.get(f"/api/forecast/{gid}/99").status_code == 404
     page = client.get("/")
-    assert page.status_code == 200 and "AttackPath" in page.text
+    assert page.status_code == 200 and "Lateralis" in page.text
     summary = client.get("/api/summary").json()
     assert summary["split"]["test"] == len(client.get("/api/networks").json()["networks"])

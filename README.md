@@ -1,5 +1,7 @@
 # Temporal Graph Learning for Cyber Attack-Path Forecasting and Adaptive Defense
 
+**Lateralis** (from *lateral movement*): forecasts an attacker's next hop through a network and recommends how to cut it off.
+
 AI & ML course project (IS353IA, Lab Part B), 2026–27, by Krrish Agarwal.
 
 The system treats a company network as a graph that changes over time (users and machines are

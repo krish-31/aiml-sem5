@@ -1,4 +1,4 @@
-/* Attack-Path Forecaster: single-page frontend (no build step, no external libraries). */
+/* Lateralis: single-page frontend (no build step, no external libraries). */
 "use strict";
 
 /* ------------------------------------------------------------------ utils */
@@ -26,7 +26,7 @@ function api(path) {
 /* ------------------------------------------------------------------ theme */
 function setTheme(t) {
   document.documentElement.dataset.theme = t;
-  try { localStorage.setItem("apf-theme", t); } catch (e) { /* storage blocked: theme still applies */ }
+  try { localStorage.setItem("lateralis-theme", t); } catch (e) { /* storage blocked: theme still applies */ }
 }
 $("#theme-toggle").addEventListener("click", () =>
   setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
@@ -199,7 +199,7 @@ function pageLanding(view) {
 
 function footer() {
   return `<footer class="footer">
-    <span>Temporal Graph Learning for Cyber Attack-Path Forecasting and Adaptive Defense · Krrish Agarwal · IS353IA · 2026–27</span>
+    <span><b style="color:var(--text)">Lateralis</b> · Temporal Graph Learning for Cyber Attack-Path Forecasting and Adaptive Defense · Krrish Agarwal · IS353IA · 2026–27</span>
     <a href="https://github.com/krish-31/aiml-sem5" target="_blank" rel="noopener">${icon("github")} krish-31/aiml-sem5</a>
   </footer>`;
 }

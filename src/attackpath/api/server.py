@@ -126,7 +126,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Attack-Path Forecaster API", lifespan=lifespan)
+app = FastAPI(title="Lateralis API", lifespan=lifespan)
 
 
 @app.get("/api/summary")
