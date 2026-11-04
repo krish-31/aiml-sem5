@@ -99,3 +99,25 @@ def recommend(
         actions.append(Action(kind, nodes, risk, drop, blk, drop - penalty * blk))
     actions.sort(key=lambda a: (-a.utility, a.blocked))
     return base, actions
+
+
+def split_actions(
+    actions: list[Action], footholds: list[int], current: int, P: torch.Tensor, targets: list[int]
+) -> tuple[Action | None, list[Action]]:
+    """Separate routine containment from the recommended next cut.
+
+    Containment = isolating a machine already known to be compromised (first aid, always worth doing).
+    Next cut = any other action, with actions on the likely routes from the attacker's *current*
+    machine ranked first, so the advice targets where the attacker is heading now rather than an
+    old foothold.
+    """
+    contain = next((a for a in actions if a.kind == "isolate" and a.nodes[0] in footholds), None)
+    rest = [a for a in actions if not (a.kind == "isolate" and a.nodes[0] in footholds)]
+    ahead = top_k_paths(P, [current], targets, k=10)
+    edges = {(a, b) for p in ahead for a, b in zip(p.nodes[:-1], p.nodes[1:])}
+    nodes = {v for p in ahead for v in p.nodes[1:]} - set(footholds) - set(targets)
+
+    def on_route(a: Action) -> bool:
+        return tuple(a.nodes) in edges if a.kind == "block" else a.nodes[0] in nodes
+
+    return contain, [a for a in rest if on_route(a)] + [a for a in rest if not on_route(a)]

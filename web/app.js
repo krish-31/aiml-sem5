@@ -228,6 +228,7 @@ const C = { gid: null, stage: 0, reveal: false, k: 3, playing: false, timer: nul
   term: { gid: null, upto: -1, filter: "all", stage: -1 } };
 
 function pageConsole(view) {
+  C.page = "console";
   view.innerHTML = `
   <div class="console">
     <section class="panel stage">
@@ -404,6 +405,7 @@ function draw() {
   $("#graph").innerHTML = graphSVG(net, fc, C.k, C.reveal, ax);
   $("#timeline").innerHTML = timelineHTML(net, fc);
   $("#intel").innerHTML = intelHTML(net, fc);
+  $("#intel").scrollTop = 0;
   syncPlay();
 }
 
@@ -575,6 +577,10 @@ function graphSVG(net, fc, k = C.k, reveal = C.reveal, ax = 1) {
   }).join("");
   const cur = nodes[fc.current];
   const pulse = `<circle class="pulse" cx="${cur.x}" cy="${cur.y}" r="${radius(cur)}"/>`;
+  const nx = fc.next_hops[0] ? nodes[fc.next_hops[0].node] : null;
+  const nextMark = nx ? `<g class="next-mark"><circle class="next-ring" cx="${nx.x}" cy="${nx.y}" r="${(radius(nx) + 0.05).toFixed(3)}"/>` +
+    `<rect class="next-tag" x="${(nx.x - 0.13).toFixed(3)}" y="${(nx.y - radius(nx) - 0.13).toFixed(3)}" width=".26" height=".066" rx=".015"/>` +
+    `<text class="next-text" x="${nx.x}" y="${(nx.y - radius(nx) - 0.083).toFixed(3)}" text-anchor="middle">NEXT ${pct(fc.next_hops[0].prob)}</text></g>` : "";
   const labels = nodes.filter((n) => held.has(n.i) || n.group === "critical" || top.has(n.i) || onPath.has(n.i) || truth.includes(n.i))
     .map((n) => {
       const cls = held.has(n.i) ? "attack" : n.group === "critical" || top.has(n.i) ? "strong" : "";
@@ -590,7 +596,7 @@ function graphSVG(net, fc, k = C.k, reveal = C.reveal, ax = 1) {
     </defs>
     ${rings}
     <path class="e-normal" d="${normal}"/>
-    ${halos}${truthPath}${predicted}${defense}${attack}${shapes}${pulse}${labels}
+    ${halos}${truthPath}${predicted}${defense}${attack}${shapes}${pulse}${labels}${nextMark}
   </svg>`;
 }
 
@@ -625,7 +631,7 @@ function intelHTML(net, fc) {
   const nm = (i) => net.nodes[i].name;
   const cur = net.nodes[fc.current];
   const maxP = Math.max(...fc.next_hops.map((h) => h.prob), 0.01);
-  const rows = fc.next_hops.map((h, r) => {
+  const rows = fc.next_hops.slice(0, C.page === "console" ? 3 : 5).map((h, r) => {
     const hit = C.reveal && h.node === fc.truth.next;
     return `<div class="row ${hit ? "hit" : ""}">
       <span class="rk">${String(r + 1).padStart(2, "0")}</span>

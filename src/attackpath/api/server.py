@@ -26,6 +26,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 
+from attackpath.defense.simulator import split_actions
 from attackpath.eventlog import build_event_log
 from attackpath.graph.builder import load_graphs, split_graphs
 from attackpath.inference import forecast_all, normal_traffic
@@ -197,10 +198,6 @@ def network(gid: int) -> dict:
     }
 
 
-def is_containment(a, footholds) -> bool:
-    return a.kind == "isolate" and a.nodes[0] in footholds
-
-
 @app.get("/api/forecast/{gid}/{stage}")
 def forecast(gid: int, stage: int) -> dict:
     g = _graph(gid)
@@ -212,6 +209,8 @@ def forecast(gid: int, stage: int) -> dict:
     normal = normal_traffic(g, f.hour)
     nz = normal.nonzero().tolist()
     p_next = f.P[f.current]
+    targets = [i for i, c in enumerate(g.critical.tolist()) if c]
+    contain, next_cuts = split_actions(f.actions, f.footholds, f.current, f.P, targets)
 
     def act(a):
         return {
@@ -237,9 +236,9 @@ def forecast(gid: int, stage: int) -> dict:
         ],
         "paths": [{"nodes": p.nodes, "prob": round(p.prob, 5)} for p in f.paths],
         # Isolating a machine already known to be compromised is routine first aid, so it is reported
-        # separately as "containment"; the recommendation is the best cut beyond the known footholds.
-        "containment": next((act(a) for a in f.actions if is_containment(a, f.footholds)), None),
-        "actions": [act(a) for a in f.actions if not is_containment(a, f.footholds)][:6],
+        # separately as "containment"; the recommendation is the best cut on the attacker's routes from here.
+        "containment": act(contain) if contain else None,
+        "actions": [act(a) for a in next_cuts][:6],
         "normal_edges": [[u, v, float(normal[u, v])] for u, v in nz],
         "truth": {"next": f.true_next, "remaining": f.true_remaining},
     }

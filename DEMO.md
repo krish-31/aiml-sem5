@@ -69,7 +69,7 @@ calibration → top-k paths → defense → console.
 | Attack caught before target | **73%** | 56% | n/a |
 
 - **Link forecast** (all traffic, next hour): AUC **0.970**, ECE 0.007 (synopsis target AUC ≥ 0.90).
-- **Defense**: the recommended **next cut** removes **20%** of path risk on average while blocking only **0.3%** of
+- **Defense**: the recommended **next cut** (aimed at the attacker's current position) removes **18%** of path risk and blocks the real route **20%** of the time, while blocking only **0.3%** of
   normal traffic. Standard **containment** (isolating the compromised machine) removes **51%** at **6.4%** traffic cost.
   Use both: contain first, then apply the next cut.
 

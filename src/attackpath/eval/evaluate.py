@@ -27,7 +27,7 @@ import torch
 from attackpath.eval.metrics import hop_metrics, link_metrics
 from attackpath.graph.builder import load_graphs, split_graphs
 from attackpath.inference import prediction_hours, states_at, transition_matrix
-from attackpath.defense.simulator import recommend
+from attackpath.defense.simulator import recommend, split_actions
 from attackpath.models.tgnn import load_model
 from attackpath.models.train import predict
 from attackpath.paths.rank import top_k_paths
@@ -104,9 +104,8 @@ def evaluate(model_path: str, graphs_path: str, defend: bool = True, verbose: bo
                         detected[name] = m
             if defend:
                 _, actions = recommend(P["tgnn"], fh, targets, normal, k=10)
-                is_contain = lambda a: a.kind == "isolate" and a.nodes[0] in fh  # noqa: E731
-                nxt = next((a for a in actions if not is_contain(a)), None)
-                con = next((a for a in actions if is_contain(a)), None)
+                con, cuts = split_actions(actions, fh, u, P["tgnn"], targets)
+                nxt = cuts[0] if cuts else None
                 if nxt:
                     defense.append((nxt.risk_drop, nxt.blocked, cuts_true_path(nxt, remaining)))
                 if con:
