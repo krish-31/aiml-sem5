@@ -39,9 +39,11 @@ See [DEMO.md](DEMO.md) for a walkthrough script.
 | Top-k attack paths (Yen) | `src/attackpath/paths/rank.py` |
 | Defense simulator | `src/attackpath/defense/simulator.py` |
 | End-to-end forecast | `src/attackpath/inference.py` |
+| Event log with path-aware flags | `src/attackpath/eventlog.py` |
+| PDF incident reports | `src/attackpath/report.py` |
 | Evaluation + baselines | `src/attackpath/eval/evaluate.py` |
 | API (FastAPI) | `src/attackpath/api/server.py` |
-| Web app (landing, console, results, method) | `web/` |
+| Web app (overview, console, event log, reports, results, method) | `web/` |
 | Older Streamlit dashboard (backup) | `app/dashboard.py` |
 
 ## Datasets

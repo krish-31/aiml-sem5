@@ -46,6 +46,16 @@ calibration → top-k paths → defense → console.
   #1 guess (C57) is exactly right and the real path is in the top 5.
 - **#184** (6 hops): a longer attack. The true next hop is in the top 3 for 5 of 6 hops.
 
+### 2b. Event log and report (1 min)
+1. **Event log page.** Say: *"These are the raw logins around the attack. Judged one by one, the attacker's logins look
+   normal (low 'unexpected' scores), because they reuse stolen passwords on everyday routes. That is exactly why
+   single-event detection fails. Once a machine is known to be compromised, each login from it is checked against the
+   forecast."* Turn on **Reveal attack**: all 3 attack logins on NET-062 are flagged (HIGH, forecast ranks #1, #1, #2).
+   Across the 45 test networks: every attack login is flagged, and 3% of other logins.
+2. **Reports page.** Pick stage 2 and press **Generate**. The PDF shows the summary, recommended response, network
+   diagram, forecast, paths, flagged events known at that moment, reliability numbers, and a ground-truth appendix.
+   The console also has a **Report PDF** button for the current stage.
+
 ### 3. Results (1 min, Results page)
 45 unseen test networks, 196 next-hop predictions:
 

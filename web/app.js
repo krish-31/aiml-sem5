@@ -271,7 +271,8 @@ function pageConsole(view) {
     <section class="panel stage">
       <div class="stage-head">
         <div><h2 id="stage-title">Loading network</h2><div class="sub" id="stage-sub">&nbsp;</div></div>
-        <div class="clock" id="clock">--</div>
+        <div class="stage-tools"><div class="clock" id="clock">--</div>
+          <a class="btn ghost sm" id="console-report" href="#" target="_blank" rel="noopener" title="Open a PDF report for this stage">Report PDF</a></div>
       </div>
       <div class="graph-wrap">
         <div class="graph" id="graph"></div>
@@ -380,6 +381,7 @@ function draw() {
     ? "Initial access detected. Forecasting the first lateral move."
     : `${C.stage} hop${C.stage > 1 ? "s" : ""} observed. Attacker currently on ${nm(fc.current)}.`;
   $("#clock").innerHTML = `logs read to <b>${esc(fc.time.label)}</b>`;
+  $("#console-report").href = `/api/report/${net.id}/${C.stage}`;
   $("#net-meta").innerHTML = `
     <dt>Machines</dt><dd>${net.nodes.length}</dd>
     <dt>Critical assets</dt><dd>${net.nodes.filter((n) => n.group === "critical").length}</dd>
@@ -682,8 +684,198 @@ function pageMethod(view) {
   </div>`;
 }
 
+/* ============================================================== event log */
+const EV = { gid: null, filter: "flagged", remote: true, reveal: false, q: "" };
+const ROLE_NAME = {
+  workstation: "Workstation", file_server: "File server", mail_server: "Mail server", app_server: "App server",
+  web_server: "Web server", print_server: "Print server", domain_controller: "Domain controller", database: "Database",
+};
+
+async function networkOptions(selected) {
+  const { networks, default: def } = await api("/api/networks");
+  const gid = selected != null && networks.some((n) => n.id === selected) ? selected : def;
+  return {
+    gid,
+    html: networks.map((n) => `<option value="${n.id}" ${n.id === gid ? "selected" : ""}>${netName(n.id)} · ${n.machines} machines · ${n.hops}-hop attack</option>`).join(""),
+  };
+}
+
+function pageEvents(view) {
+  view.innerHTML = `<div class="page">
+    <div class="page-head fade-in">
+      <div><span class="eyebrow">Event log</span><h1>Login events, checked against the forecast</h1>
+        <p>Every machine-to-machine login around the attack. Logins from compromised machines are compared with the
+          forecast made before they happened.</p></div>
+    </div>
+    <div class="card toolbar fade-in">
+      <select class="select" id="ev-net" aria-label="Network"><option>Loading</option></select>
+      <input class="search" id="ev-q" type="search" placeholder="Search user or machine" value="${esc(EV.q)}" aria-label="Search"/>
+      <div class="seg" id="ev-filter">${[["all", "All"], ["flagged", "Flagged"], ["high", "High"]].map(([k, l]) =>
+        `<button type="button" data-f="${k}" aria-pressed="${EV.filter === k}">${l}</button>`).join("")}</div>
+      <label class="switch-row"><span>Remote only</span><button class="switch" id="ev-remote" type="button" role="switch" aria-checked="${EV.remote}"></button></label>
+      <label class="switch-row"><span>Reveal attack</span><button class="switch" id="ev-reveal" type="button" role="switch" aria-checked="${EV.reveal}"></button></label>
+    </div>
+    <div class="ev-summary" id="ev-summary"></div>
+    <div class="card log-wrap fade-in"><div id="ev-table" class="empty">Scoring events with the model…</div></div>
+    <div class="card note" style="margin-top:14px">
+      <b>How events are flagged</b>
+      <span><span class="sev high">High</span> login from a compromised machine to one of the top-3 forecast machines.
+        <span class="sev medium">Medium</span> any other login from a compromised machine, or a very unexpected connection.</span>
+      <span><b>Unexpected</b> is 1 − P(connection this hour) from the model's link head. On its own it is a weak attack signal, because
+        attackers reuse stolen passwords on routes people use every day; the forecast check is what catches them.</span>
+    </div>
+    ${footer()}
+  </div>`;
+
+  const draw = () => drawEvents();
+  $("#ev-net").addEventListener("change", (e) => { EV.gid = Number(e.target.value); loadEvents(); });
+  $("#ev-q").addEventListener("input", (e) => { EV.q = e.target.value; draw(); });
+  $$("#ev-filter button").forEach((b) => b.addEventListener("click", () => {
+    EV.filter = b.dataset.f;
+    $$("#ev-filter button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    draw();
+  }));
+  $("#ev-remote").addEventListener("click", (e) => { EV.remote = !EV.remote; e.currentTarget.setAttribute("aria-checked", String(EV.remote)); draw(); });
+  $("#ev-reveal").addEventListener("click", (e) => { EV.reveal = !EV.reveal; e.currentTarget.setAttribute("aria-checked", String(EV.reveal)); draw(); });
+
+  networkOptions(EV.gid).then(({ gid, html }) => {
+    EV.gid = gid;
+    if ($("#ev-net")) $("#ev-net").innerHTML = html;
+    loadEvents();
+  }).catch(() => { if ($("#ev-table")) $("#ev-table").textContent = "Cannot reach the API."; });
+}
+
+async function loadEvents() {
+  const gid = EV.gid;
+  $("#ev-table").className = "empty";
+  $("#ev-table").textContent = "Scoring events with the model…";
+  try {
+    const data = await api(`/api/events/${gid}`);
+    if (gid !== EV.gid || !$("#ev-table")) return;
+    EV.data = data;
+    drawEvents();
+  } catch (e) {
+    if ($("#ev-table")) $("#ev-table").textContent = `Could not load events (${e.message}).`;
+  }
+}
+
+function drawEvents() {
+  const data = EV.data;
+  if (!data || !$("#ev-table")) return;
+  const q = EV.q.trim().toLowerCase();
+  const rows = data.events.filter((e) =>
+    (!EV.remote || e.remote) &&
+    (EV.filter === "all" || (EV.filter === "high" ? e.severity === "high" : e.severity === "high" || e.severity === "medium")) &&
+    (!q || [e.user, e.src, e.dst].some((x) => x.toLowerCase().includes(q))));
+  const s = data.summary;
+  $("#ev-summary").innerHTML = `
+    <span class="chip">${s.events} events</span><span class="chip">${s.remote} machine-to-machine</span>
+    <span class="chip"><span class="sev high">High</span> ${s.high}</span><span class="chip"><span class="sev medium">Medium</span> ${s.medium}</span>
+    ${EV.reveal ? `<span class="chip ok">${s.attack_flagged} of ${s.attack_events} attack logins flagged · ${s.normal_flagged} normal logins flagged</span>` : ""}
+    <span class="chip faint">showing ${rows.length}</span>`;
+  if (!rows.length) {
+    $("#ev-table").className = "empty";
+    $("#ev-table").textContent = "No events match these filters.";
+    return;
+  }
+  const role = (r) => ROLE_NAME[r] || r;
+  $("#ev-table").className = "";
+  $("#ev-table").innerHTML = `<table class="table log">
+    <thead><tr><th>Time</th><th>User</th><th>Connection</th><th>Signals</th><th class="num">Forecast</th><th>Unexpected</th><th>Flag</th>${EV.reveal ? "<th>Truth</th>" : ""}</tr></thead>
+    <tbody>${rows.slice(-600).reverse().map((e) => `<tr class="sev-${e.severity} ${EV.reveal && e.attack ? "is-attack" : ""}">
+      <td class="mono">${e.label}</td>
+      <td class="mono">${esc(e.user)}</td>
+      <td><span class="mono">${esc(e.src)} → ${esc(e.dst)}</span><small>${role(e.src_role)} to ${role(e.dst_role)}</small></td>
+      <td>${e.from_compromised ? '<span class="tag a">from compromised</span>' : ""}${e.novel ? '<span class="tag">new route</span>' : ""}${!e.remote ? '<span class="tag">local logon</span>' : ""}</td>
+      <td class="num mono">${e.forecast_rank == null ? "-" : `#${e.forecast_rank}`}</td>
+      <td>${e.unexpected == null ? '<span class="faint">-</span>' : `<span class="ubar"><i style="width:${(100 * e.unexpected).toFixed(0)}%"></i></span><span class="mono uval">${e.unexpected.toFixed(2)}</span>`}</td>
+      <td>${e.severity === "info" || e.severity === "low" ? `<span class="faint">${e.severity}</span>` : `<span class="sev ${e.severity}">${e.severity}</span>`}</td>
+      ${EV.reveal ? `<td>${e.attack ? `<span class="sev attack">hop ${e.step}</span>` : ""}</td>` : ""}
+    </tr>`).join("")}</tbody></table>`;
+}
+
+/* ================================================================ reports */
+const RP = { gid: null, stage: 0, truth: true, recent: [] };
+
+function pageReports(view) {
+  view.innerHTML = `<div class="page">
+    <div class="page-head fade-in">
+      <div><span class="eyebrow">Reports</span><h1>Incident forecast reports</h1>
+        <p>Generate a PDF for any network and attack stage, ready to share with an incident-response team.</p></div>
+    </div>
+    <div class="reports">
+      <div class="card rp-form fade-in">
+        <div class="ctl-title">Network</div>
+        <select class="select" id="rp-net" aria-label="Network"><option>Loading</option></select>
+        <div class="ctl-title" style="margin-top:18px">Attack stage</div>
+        <select class="select" id="rp-stage" aria-label="Attack stage"></select>
+        <label class="switch-row" style="margin-top:18px"><span>Include ground-truth appendix</span>
+          <button class="switch" id="rp-truth" type="button" role="switch" aria-checked="${RP.truth}"></button></label>
+        <div class="rp-actions">
+          <button class="btn primary" id="rp-preview" type="button">Generate ${icon("arrow")}</button>
+          <a class="btn ghost" id="rp-download" href="#" download>Download PDF</a>
+        </div>
+        <div class="ctl-title" style="margin-top:26px">What's inside</div>
+        <ol class="rp-contents">
+          <li>Summary: compromised machines, attacker position, risk, confidence</li>
+          <li>Recommended response with its risk cut and cost</li>
+          <li>Network diagram of the attack and forecast paths</li>
+          <li>Next-move forecast with probabilities and uncertainty</li>
+          <li>Top attack paths and other responses considered</li>
+          <li>Flagged log events known at that moment</li>
+          <li>Model reliability on held-out networks</li>
+          <li>Optional ground-truth appendix</li>
+        </ol>
+        <div id="rp-recent"></div>
+      </div>
+      <div class="card rp-preview fade-in d1">
+        <div class="rp-empty" id="rp-empty">${icon("lock")}<span>Pick a network and stage, then press Generate to preview the report here.</span></div>
+        <iframe id="rp-frame" title="Report preview" hidden></iframe>
+      </div>
+    </div>
+    ${footer()}
+  </div>`;
+
+  const url = (download) => `/api/report/${RP.gid}/${RP.stage}?truth=${RP.truth ? 1 : 0}${download ? "&download=1" : ""}`;
+  const syncLink = () => { const a = $("#rp-download"); if (a) a.href = url(true); };
+  const fillStages = async () => {
+    const net = await api(`/api/network/${RP.gid}`);
+    if (RP.stage >= net.hops) RP.stage = 0;
+    $("#rp-stage").innerHTML = net.stages.map((t, i) =>
+      `<option value="${i}" ${i === RP.stage ? "selected" : ""}>Stage ${i + 1} · ${i === 0 ? "initial access" : `${i} hop${i > 1 ? "s" : ""} observed`} · ${t.label}</option>`).join("");
+    syncLink();
+  };
+  const renderRecent = () => {
+    const el = $("#rp-recent");
+    if (!el || !RP.recent.length) return;
+    el.innerHTML = `<div class="ctl-title" style="margin-top:22px">Generated this session</div>` +
+      RP.recent.map((r) => `<a class="rp-item" href="${r.url}" target="_blank" rel="noopener"><span class="mono">${r.name}</span><span class="faint">${r.when}</span></a>`).join("");
+  };
+
+  $("#rp-net").addEventListener("change", (e) => { RP.gid = Number(e.target.value); RP.stage = 0; fillStages(); });
+  $("#rp-stage").addEventListener("change", (e) => { RP.stage = Number(e.target.value); syncLink(); });
+  $("#rp-truth").addEventListener("click", (e) => { RP.truth = !RP.truth; e.currentTarget.setAttribute("aria-checked", String(RP.truth)); syncLink(); });
+  $("#rp-preview").addEventListener("click", () => {
+    const f = $("#rp-frame");
+    f.hidden = false;
+    $("#rp-empty").hidden = true;
+    f.src = url(false);
+    RP.recent.unshift({ url: url(false), name: `${netName(RP.gid)} · stage ${RP.stage + 1}`, when: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
+    RP.recent = RP.recent.slice(0, 5);
+    renderRecent();
+  });
+
+  networkOptions(RP.gid).then(async ({ gid, html }) => {
+    RP.gid = gid;
+    if (!$("#rp-net")) return;
+    $("#rp-net").innerHTML = html;
+    await fillStages();
+    renderRecent();
+  }).catch(() => { if ($("#rp-empty")) $("#rp-empty").textContent = "Cannot reach the API."; });
+}
+
 /* ----------------------------------------------------------------- router */
-const ROUTES = { "": pageLanding, console: pageConsole, results: pageResults, method: pageMethod };
+const ROUTES = { "": pageLanding, console: pageConsole, events: pageEvents, reports: pageReports, results: pageResults, method: pageMethod };
 let cleanup = null;
 
 function route() {

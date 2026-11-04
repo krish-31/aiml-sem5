@@ -50,3 +50,35 @@ def test_errors_and_static(client):
     assert page.status_code == 200 and "Lateralis" in page.text
     summary = client.get("/api/summary").json()
     assert summary["split"]["test"] == len(client.get("/api/networks").json()["networks"])
+
+
+def test_event_log_flags_attack_and_respects_time(client):
+    gid = client.get("/api/networks").json()["default"]
+    data = client.get(f"/api/events/{gid}").json()
+    events, summary = data["events"], data["summary"]
+    assert summary["events"] == len(events) > 0
+    assert [e["time"] for e in events] == sorted(e["time"] for e in events)
+    assert all(data["window"]["start"] <= e["hour"] <= data["window"]["end"] for e in events)
+    for e in events:
+        if not e["remote"]:
+            assert e["severity"] == "info" and e["unexpected"] is None
+        if e["severity"] == "high":
+            assert e["from_compromised"] and e["forecast_rank"] <= 3
+        if e["unexpected"] is not None:
+            assert 0 <= e["unexpected"] <= 1
+    # every attack login comes from a compromised machine, so it is flagged
+    attack = [e for e in events if e["attack"]]
+    assert attack and all(e["severity"] in ("high", "medium") for e in attack)
+    assert summary["attack_flagged"] == len(attack)
+
+
+def test_report_pdf(client):
+    gid = client.get("/api/networks").json()["default"]
+    r = client.get(f"/api/report/{gid}/0")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/pdf"
+    assert r.content[:5] == b"%PDF-" and len(r.content) > 10_000
+    assert "inline" in r.headers["content-disposition"]
+    d = client.get(f"/api/report/{gid}/0?truth=0&download=1")
+    assert "attachment" in d.headers["content-disposition"] and d.content[:5] == b"%PDF-"
+    assert client.get(f"/api/report/{gid}/99").status_code == 404

@@ -5,6 +5,8 @@ Serves the static frontend at / and JSON under /api:
   GET /api/networks                 the held-out test networks
   GET /api/network/{id}             machines with layout positions, attack length
   GET /api/forecast/{id}/{stage}    full forecast after `stage` attack hops
+  GET /api/events/{id}              login events around the attack, with path-aware flags
+  GET /api/report/{id}/{stage}      PDF incident forecast report (?truth=0 hides the ground truth)
 
 Run:
     .venv/bin/python -m attackpath.api.server        # http://127.0.0.1:8000
@@ -21,17 +23,20 @@ from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 
+from attackpath.eventlog import build_event_log
 from attackpath.graph.builder import load_graphs, split_graphs
 from attackpath.inference import forecast_all, normal_traffic
 from attackpath.models.tgnn import load_model
+from attackpath.report import build_report, report_filename
 
 ROOT = Path(__file__).resolve().parents[3]
 MODEL = Path(os.environ.get("ATTACKPATH_MODEL", ROOT / "checkpoints" / "tgnn.pt"))
 GRAPHS = ROOT / "data" / "processed" / "synthetic.pt"
 NODES = ROOT / "data" / "synthetic" / "nodes.parquet"
+EVENTS = ROOT / "data" / "synthetic" / "events.parquet"
 EVAL = ROOT / "results" / "eval_synthetic.json"
 WEB = ROOT / "web"
 DEMO_NETWORK = int(os.environ.get("ATTACKPATH_DEMO_NETWORK", 62))
@@ -198,6 +203,7 @@ def forecast(gid: int, stage: int) -> dict:
     return {
         "id": gid,
         "stage": stage,
+        "hour": f.hour,
         "time": clock(f.hour),
         "footholds": f.footholds,
         "current": f.current,
@@ -222,6 +228,32 @@ def forecast(gid: int, stage: int) -> dict:
         "normal_edges": [[u, v, float(normal[u, v])] for u, v in nz],
         "truth": {"next": f.true_next, "remaining": f.true_remaining},
     }
+
+
+@lru_cache(maxsize=16)
+def event_log(gid: int) -> dict:
+    g = _graph(gid)
+    s = store()
+    events = pd.read_parquet(EVENTS, filters=[("graph_id", "==", gid)])
+    return build_event_log(
+        s["model"], g, events, s["roles"][gid], forecasts(gid),
+        temperature=s["ckpt"].get("temperatures", {}).get("link", 1.0), context=s["ckpt"].get("context", 24),
+    )
+
+
+@app.get("/api/events/{gid}")
+def events(gid: int) -> dict:
+    return event_log(gid)
+
+
+@app.get("/api/report/{gid}/{stage}")
+def report(gid: int, stage: int, truth: bool = True, download: bool = False) -> Response:
+    fc = forecast(gid, stage)  # validates gid and stage
+    ev = json.loads(EVAL.read_text()) if EVAL.exists() else None
+    pdf = build_report(network(gid), fc, event_log(gid), ev, include_truth=truth)
+    disposition = "attachment" if download else "inline"
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'{disposition}; filename="{report_filename(gid, stage)}"'})
 
 
 # static frontend last, so /api routes win
