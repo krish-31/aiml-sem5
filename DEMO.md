@@ -98,9 +98,10 @@ lateral movement works. Real datasets come next.
 ever logged on from their own desk, so "logged on from elsewhere" gave away every attack. I fixed that: normal
 users also roam (8% of normal logins come from another machine), and attacks are only 0.16% of events.
 
-**Why does it often say "isolate the infected PC"?** Because that is usually the right call: it removes all
-paths at small cost. Later in the attack, when the attacker holds several machines, the recommendation shifts
-to blocking specific access paths.
+**Isn't "isolate the infected PC" obvious?** Yes, so it is shown separately as standard containment. The main
+recommendation is the **next cut**: the best action beyond the machines already known to be compromised (for example,
+revoking C2's access to C8 blocks the most likely route for 0.7% of traffic). That still protects the network if the
+attacker already holds other stolen passwords or containment comes too late.
 
 **What's the GNN actually learning?** Each hour, graph attention combines a machine's own activity with its
 neighbours'; the GRU remembers earlier hours; the hop head scores "attacker on u → v next" using both machines'

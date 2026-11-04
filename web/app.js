@@ -445,9 +445,10 @@ function termSys(fc, events, upto) {
   const top = fc.next_hops[0];
   const a = fc.actions[0];
   const act = a ? (a.kind === "isolate" ? `isolate ${nm(a.nodes[0])}` : `revoke ${nm(a.nodes[0])} → ${nm(a.nodes[1])}`) : "none";
+  const contain = fc.containment ? `contain ${nm(fc.containment.nodes[0])} · ` : "";
   return `<div class="t-line t-sys"><span class="t-ts">${at}</span><span class="t-kind">MODEL</span>` +
     `<span class="t-text">stage ${fc.stage + 1}: attacker on <b>${nm(fc.current)}</b> · next hop <b>${nm(top.node)}</b> ${pct(top.prob)}` +
-    ` · path risk ${pct(fc.risk)} · response <b>${act}</b></span></div>`;
+    ` · path risk ${pct(fc.risk)} · ${contain}next cut <b>${act}</b></span></div>`;
 }
 
 const termVisible = (events) => (C.term.filter === "flagged"
@@ -652,12 +653,13 @@ function intelHTML(net, fc) {
     : `Revoke access <span class="mono">${esc(nm(a.nodes[0]))}</span> to <span class="mono">${esc(nm(a.nodes[1]))}</span>`);
   const defense = best ? `
     <div class="defense">
-      <div class="tag">${icon("shield")}Recommended response</div>
+      <div class="tag">${icon("shield")}Recommended next cut</div>
       <div class="act">${actText(best)}</div>
       <div class="dmeters">
         <div><div class="k">Path risk removed</div><div class="v">${pct(best.risk_drop)}</div><div class="meter"><i style="width:${pct(best.risk_drop)}"></i></div></div>
         <div><div class="k">Normal traffic blocked</div><div class="v">${pct(best.blocked, 1)}</div><div class="meter cost"><i style="width:${pct(Math.min(1, best.blocked))}"></i></div></div>
       </div>
+      ${fc.containment ? `<div class="contain"><span class="mono">Also</span> ${actText(fc.containment)} (already compromised): removes ${pct(fc.containment.risk_drop)} of risk, blocks ${pct(fc.containment.blocked, 1)}.</div>` : ""}
       ${fc.actions.length > 1 ? `<div class="alts">
         <div class="alt head"><span>Alternatives</span><span>Risk</span><span>Cost</span></div>
         ${fc.actions.slice(1, 5).map((a) => `<div class="alt"><span>${actText(a)}</span><span>${pct(a.risk_drop)}</span><span>${pct(a.blocked, 1)}</span></div>`).join("")}

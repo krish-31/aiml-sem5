@@ -217,15 +217,21 @@ def build_report(net: dict, fc: dict, events: dict | None, evaluation: dict | No
     story.append(kt)
 
     # recommendation
+    containment_note = ""
+    if fc.get("containment"):
+        c = fc["containment"]
+        containment_note = (f" Standard containment, isolating already-compromised {name(c['nodes'][0])}, removes "
+                            f"<b>{c['risk_drop']:.0%}</b> of the risk and blocks <b>{c['blocked']:.1%}</b> of traffic.")
     if fc["actions"]:
         a = fc["actions"][0]
         what = (f"Isolate {name(a['nodes'][0])} ({role(a['nodes'][0]).lower()})" if a["kind"] == "isolate"
                 else f"Revoke access from {name(a['nodes'][0])} to {name(a['nodes'][1])}")
-        rec = Table([[Paragraph("RECOMMENDED RESPONSE", ParagraphStyle("t", fontName="Plex-Bold", fontSize=7.5, textColor=DEFEND))],
+        rec = Table([[Paragraph("RECOMMENDED NEXT CUT", ParagraphStyle("t", fontName="Plex-Bold", fontSize=7.5, textColor=DEFEND))],
                      [Paragraph(what, S["act"])],
                      [Paragraph(f"Removes <b>{a['risk_drop']:.0%}</b> of the forecast path risk while blocking "
                                 f"<b>{a['blocked']:.1%}</b> of normal machine-to-machine traffic from the last 24 hours. "
-                                "Chosen by the defense simulator as the action with the best risk removed minus traffic blocked.",
+                                "Chosen by the defense simulator as the action with the best risk removed minus traffic blocked, "
+                                "among actions beyond the machines already known to be compromised." + containment_note,
                                 S["body"])]],
                     colWidths=[178 * mm])
         rec.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#eef8f3")),

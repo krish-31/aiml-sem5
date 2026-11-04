@@ -197,6 +197,10 @@ def network(gid: int) -> dict:
     }
 
 
+def is_containment(a, footholds) -> bool:
+    return a.kind == "isolate" and a.nodes[0] in footholds
+
+
 @app.get("/api/forecast/{gid}/{stage}")
 def forecast(gid: int, stage: int) -> dict:
     g = _graph(gid)
@@ -208,6 +212,16 @@ def forecast(gid: int, stage: int) -> dict:
     normal = normal_traffic(g, f.hour)
     nz = normal.nonzero().tolist()
     p_next = f.P[f.current]
+
+    def act(a):
+        return {
+            "kind": a.kind,
+            "nodes": list(a.nodes),
+            "label": a.describe(names),
+            "risk_drop": round(a.risk_drop, 4),
+            "blocked": round(a.blocked, 4),
+            "utility": round(a.utility, 4),
+        }
     return {
         "id": gid,
         "stage": stage,
@@ -222,17 +236,10 @@ def forecast(gid: int, stage: int) -> dict:
             {"node": n.node, "prob": round(n.prob, 4), "uncertainty": round(n.uncertainty, 4)} for n in f.next_hops
         ],
         "paths": [{"nodes": p.nodes, "prob": round(p.prob, 5)} for p in f.paths],
-        "actions": [
-            {
-                "kind": a.kind,
-                "nodes": list(a.nodes),
-                "label": a.describe(names),
-                "risk_drop": round(a.risk_drop, 4),
-                "blocked": round(a.blocked, 4),
-                "utility": round(a.utility, 4),
-            }
-            for a in f.actions[:6]
-        ],
+        # Isolating a machine already known to be compromised is routine first aid, so it is reported
+        # separately as "containment"; the recommendation is the best cut beyond the known footholds.
+        "containment": next((act(a) for a in f.actions if is_containment(a, f.footholds)), None),
+        "actions": [act(a) for a in f.actions if not is_containment(a, f.footholds)][:6],
         "normal_edges": [[u, v, float(normal[u, v])] for u, v in nz],
         "truth": {"next": f.true_next, "remaining": f.true_remaining},
     }
