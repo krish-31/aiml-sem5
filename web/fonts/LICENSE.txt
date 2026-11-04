@@ -1,5 +1,4 @@
 Fonts in this folder are from Google Fonts and licensed under the SIL Open Font License 1.1:
-- Instrument Serif (Rodrigo Fuenzalida, Jordan Egstad)
-- Geist (Vercel)
-- JetBrains Mono (JetBrains)
+- IBM Plex Sans (IBM)
+- IBM Plex Mono (IBM)
 License text: https://openfontlicense.org

@@ -180,17 +180,17 @@ function pageLanding(view) {
       "Three moves, one pipeline. Each stage reads the previous one's output, from raw logs to a recommended action.")}
     <section class="moves">
       <article class="card move"><div class="move-art">${ART.observe}</div><div class="move-body">
-        <span class="roman">i.</span><h3>Observe</h3>
+        <span class="roman">Step 01</span><h3>Observe</h3>
         <p>Login and connection logs become one graph per hour. Users and machines are nodes, logins are edges,
           each carrying clues such as new connections and time of day.</p>
         <div class="tech">heterogeneous snapshots / 1 h windows</div></div></article>
       <article class="card move"><div class="move-art">${ART.forecast}</div><div class="move-body">
-        <span class="roman">ii.</span><h3>Forecast</h3>
+        <span class="roman">Step 02</span><h3>Forecast</h3>
         <p>Graph attention reads each hour and a GRU remembers the past. Every machine gets a calibrated probability
           of being the attacker's next hop.</p>
         <div class="tech">2 x GAT + GRU / temperature scaling</div></div></article>
       <article class="card move"><div class="move-art">${ART.defend}</div><div class="move-body">
-        <span class="roman">iii.</span><h3>Defend</h3>
+        <span class="roman">Step 03</span><h3>Defend</h3>
         <p>The likeliest routes to the domain controller and databases are ranked, and a simulator picks the isolation
           or access removal that cuts the most risk for the least disruption.</p>
         <div class="tech">Yen's k-shortest paths / utility search</div></div></article>
