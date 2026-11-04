@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ipynb_checkpoints/
-data/
+/data/
 wandb/
 *.pt
 .DS_Store
