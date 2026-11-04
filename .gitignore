@@ -9,3 +9,4 @@ wandb/
 .DS_Store
 .claude/
 checkpoints/
+dataset/events_all.csv.gz

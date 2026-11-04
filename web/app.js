@@ -232,6 +232,11 @@ try { C.term.min = localStorage.getItem("lateralis-feed-min") === "1"; } catch (
 
 function pageConsole(view) {
   C.page = "console";
+  // deep links, e.g. #/console?net=62&stage=2&reveal=1 (stage is 1-based, as shown on screen)
+  const q = new URLSearchParams(location.hash.split("?")[1] || "");
+  if (q.has("net")) { C.gid = Number(q.get("net")); C.stage = 0; }
+  if (q.has("stage")) C.stage = Math.max(0, Number(q.get("stage")) - 1);
+  if (q.has("reveal")) C.reveal = q.get("reveal") === "1";
   view.innerHTML = `
   <div class="console">
     <section class="panel stage">
@@ -328,6 +333,8 @@ function pageConsole(view) {
 
   api("/api/networks").then(({ networks, default: def }) => {
     if (C.gid == null || !networks.some((n) => n.id === C.gid)) C.gid = def;
+    const hops = networks.find((n) => n.id === C.gid).hops;
+    C.stage = Math.min(C.stage, hops - 1);
     const sel = $("#net-select");
     if (!sel) return;
     sel.innerHTML = networks.map((n) =>
@@ -434,8 +441,9 @@ function termLine(e) {
   const flagged = e.severity === "high" || e.severity === "medium";
   const route = e.remote ? `${esc(e.src)} → ${esc(e.dst)}` : esc(e.dst);
   const meta = e.remote ? `${ROLE_SHORT[e.src_role] || e.src_role} → ${ROLE_SHORT[e.dst_role] || e.dst_role}` : "local logon";
-  const flag = e.severity === "high" ? `HIGH · forecast #${e.forecast_rank}`
-    : e.severity === "medium" ? (e.forecast_rank ? `MEDIUM · forecast #${e.forecast_rank}` : "MEDIUM · unexpected")
+  // compact so it fits the side panel: "HIGH #2" = flagged high, destination was forecast rank 2
+  const flag = e.severity === "high" ? `HIGH #${e.forecast_rank}`
+    : e.severity === "medium" ? (e.forecast_rank ? `MED #${e.forecast_rank}` : "MED unexp.")
     : e.remote ? "ok" : "";
   const truth = C.reveal && e.attack ? `<span class="t-truth">ATTACK hop ${e.step}</span>` : "";
   return `<div class="t-line ${flagged ? `t-${e.severity}` : e.remote ? "" : "t-dim"}">` +
@@ -1013,7 +1021,7 @@ function pageReports(view) {
     const net = await api(`/api/network/${RP.gid}`);
     if (RP.stage >= net.hops) RP.stage = 0;
     $("#rp-stage").innerHTML = net.stages.map((t, i) =>
-      `<option value="${i}" ${i === RP.stage ? "selected" : ""}>Stage ${i + 1} · ${i === 0 ? "initial access" : `${i} hop${i > 1 ? "s" : ""} observed`} · ${t.label}</option>`).join("");
+      `<option value="${i}" ${i === RP.stage ? "selected" : ""}>Stage ${i + 1} · ${i === 0 ? "entry" : `${i} hop${i > 1 ? "s" : ""}`} · ${t.iso.slice(5).replace("T", " ")}</option>`).join("");
     syncLink();
   };
   const renderRecent = () => {
