@@ -1,0 +1,23 @@
+train/val/test networks: 210/45/45 | params: 145,666
+epoch  1 | train link 0.285 hop 2.693 | val link AUC 0.966 hop top1 0.27 top3 0.54 | val loss 2.582 | 101s
+epoch  2 | train link 0.215 hop 2.407 | val link AUC 0.968 hop top1 0.24 top3 0.58 | val loss 2.393 | 66s
+epoch  3 | train link 0.211 hop 2.295 | val link AUC 0.967 hop top1 0.24 top3 0.54 | val loss 2.433 | 281s
+epoch  4 | train link 0.207 hop 2.306 | val link AUC 0.968 hop top1 0.24 top3 0.54 | val loss 2.463 | 114s
+epoch  5 | train link 0.205 hop 2.294 | val link AUC 0.969 hop top1 0.25 top3 0.58 | val loss 2.398 | 54s
+epoch  6 | train link 0.203 hop 2.244 | val link AUC 0.969 hop top1 0.24 top3 0.55 | val loss 2.354 | 48s
+epoch  7 | train link 0.203 hop 2.257 | val link AUC 0.969 hop top1 0.25 top3 0.54 | val loss 2.358 | 47s
+epoch  8 | train link 0.201 hop 2.245 | val link AUC 0.970 hop top1 0.27 top3 0.55 | val loss 2.352 | 52s
+epoch  9 | train link 0.199 hop 2.212 | val link AUC 0.969 hop top1 0.25 top3 0.57 | val loss 2.367 | 43s
+epoch 10 | train link 0.201 hop 2.193 | val link AUC 0.970 hop top1 0.25 top3 0.56 | val loss 2.342 | 35s
+epoch 11 | train link 0.200 hop 2.180 | val link AUC 0.970 hop top1 0.24 top3 0.54 | val loss 2.400 | 36s
+epoch 12 | train link 0.198 hop 2.156 | val link AUC 0.970 hop top1 0.25 top3 0.55 | val loss 2.352 | 42s
+epoch 13 | train link 0.199 hop 2.126 | val link AUC 0.970 hop top1 0.26 top3 0.56 | val loss 2.329 | 61s
+epoch 14 | train link 0.199 hop 2.095 | val link AUC 0.970 hop top1 0.25 top3 0.54 | val loss 2.404 | 41s
+epoch 15 | train link 0.198 hop 2.042 | val link AUC 0.971 hop top1 0.29 top3 0.55 | val loss 2.435 | 64s
+epoch 16 | train link 0.198 hop 2.032 | val link AUC 0.970 hop top1 0.25 top3 0.54 | val loss 2.469 | 39s
+epoch 17 | train link 0.197 hop 1.983 | val link AUC 0.970 hop top1 0.24 top3 0.53 | val loss 2.565 | 46s
+epoch 18 | train link 0.196 hop 1.955 | val link AUC 0.970 hop top1 0.25 top3 0.56 | val loss 2.537 | 40s
+epoch 19 | train link 0.197 hop 1.893 | val link AUC 0.970 hop top1 0.23 top3 0.55 | val loss 2.553 | 37s
+early stop (no improvement for 6 epochs)
+calibration temperatures: link 1.01, hop 1.01
+saved -> checkpoints/tgnn.pt

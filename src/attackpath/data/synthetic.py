@@ -56,6 +56,10 @@ class SyntheticConfig:
     attack_max_steps: int = 6
     attack_gap_mean_min: float = 45.0  # mean minutes between attack hops
     attack_warmup_days: float = 2.0  # attacks start after this much normal history
+    # attackers are goal-driven (credential dumping, MITRE ATT&CK T1003): they prefer machines
+    # where admins log on, and servers, over random workstations. 1.0 = purely random walk.
+    attack_admin_bias: float = 6.0
+    attack_server_bias: float = 2.0
     seed: int = 42
 
     def __post_init__(self) -> None:
@@ -231,6 +235,16 @@ def _hop_options(net: Network, machine: str) -> list[str]:
     return sorted(opts)
 
 
+def _attractiveness(net: Network, machine: str, cfg: SyntheticConfig) -> float:
+    """How much an attacker wants this machine: admin credentials to steal, or a server."""
+    w = 1.0
+    if any(net.users[u] == "admin" for u in net.users_with_access(machine)):
+        w *= cfg.attack_admin_bias
+    if net.computers[machine] != "workstation":
+        w *= cfg.attack_server_bias
+    return w
+
+
 def _sample_path(rng: np.random.Generator, net: Network, cfg: SyntheticConfig, entry: str) -> list[str] | None:
     """Randomized depth-first search for a simple path of 3–6 hops ending at a critical asset.
 
@@ -239,11 +253,14 @@ def _sample_path(rng: np.random.Generator, net: Network, cfg: SyntheticConfig, e
     """
     target_len = int(rng.integers(cfg.attack_min_steps, cfg.attack_max_steps + 1))
     critical = set(net.critical)
+    weight = {c: _attractiveness(net, c, cfg) for c in net.computers}
 
     def dfs(path: list[str]) -> list[str] | None:
         hops = len(path) - 1
         nbrs = [n for n in _hop_options(net, path[-1]) if n not in path]
-        rng.shuffle(nbrs)
+        # goal-driven attacker: try valuable machines first (weighted random order, Gumbel trick)
+        keys = [np.log(weight[n]) + rng.gumbel() for n in nbrs]
+        nbrs = [n for _, n in sorted(zip(keys, nbrs), reverse=True)]
         if hops == target_len - 1:
             ends = [n for n in nbrs if n in critical]
             return path + [ends[0]] if ends else None

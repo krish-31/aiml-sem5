@@ -53,7 +53,7 @@ early, and every later step is an improvement, not a rescue.
 - Negative sampling: for each real edge, sample fake edges that did *not* happen.
 - **Output:** a list of PyTorch Geometric `HeteroData` snapshots.
 
-## Milestone 4: Temporal GNN (weeks 8–10)
+## Milestone 4: Temporal GNN (weeks 8–10) ✅ first version (synthetic)
 `src/attackpath/models/tgnn.py`, `train.py`
 - **Encoder:** 2 GAT layers, 4 heads, hidden size 64, separate weights per node/edge type.
 - **Memory:** GRU carries each node's embedding from window t to t+1.
@@ -64,20 +64,20 @@ early, and every later step is an improvement, not a rescue.
 - Track runs in Weights & Biases.
 - **Target:** AUC-ROC ≥ 0.90 on the LANL test split.
 
-## Milestone 5: Calibration + uncertainty (week 10)
+## Milestone 5: Calibration + uncertainty (week 10) ✅
 `src/attackpath/models/calibrate.py`
 - Temperature scaling fitted on the validation set.
 - Uncertainty = entropy of the calibrated probability.
 - **Target:** expected calibration error < 0.05.
 
-## Milestone 6: Attack-path ranking (week 11)
+## Milestone 6: Attack-path ranking (week 11) ✅ first version
 `src/attackpath/paths/rank.py`
 - Edge cost = −log(p). Run Yen's k-shortest paths (NetworkX) from the compromised
   node(s) to the critical assets.
 - Path score = product of its edge probabilities.
 - **Target:** top-5 path hit rate ≥ 70% on synthetic test graphs, plus time-to-detection.
 
-## Milestone 7: Defense simulator (week 12)
+## Milestone 7: Defense simulator (week 12) ✅ first version
 `src/attackpath/defense/simulator.py`
 - Candidate actions: isolate a node, or remove a user's privilege edge.
 - For each action, delete those edges, re-rank paths, and compute
@@ -85,7 +85,7 @@ early, and every later step is an improvement, not a rescue.
 - Recommend the highest-utility action.
 - **Target:** ≥ 30% risk cut while blocking < 10% of normal traffic.
 
-## Milestone 8: Dashboard (week 13)
+## Milestone 8: Dashboard (week 13) ✅ Streamlit demo (FastAPI later)
 `src/attackpath/api/` (FastAPI) + `app/dashboard.py` (Streamlit)
 - Replay logs in time order (it's a research prototype, not live).
 - Show the graph, the compromised node, the top-k predicted paths with probabilities
