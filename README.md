@@ -21,7 +21,10 @@ uv pip install --python .venv/bin/python -e ".[dev,ml]"
 # 1. generate synthetic networks with labeled attack paths
 .venv/bin/python -m attackpath.data.synthetic --n-graphs 300
 
-# 2. run tests
+# 2. turn events into hourly graph snapshots
+.venv/bin/python -m attackpath.graph.builder
+
+# 3. run tests
 .venv/bin/python -m pytest -q
 ```
 

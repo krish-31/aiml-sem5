@@ -15,12 +15,12 @@ early, and every later step is an improvement, not a rescue.
 
 ---
 
-## Milestone 0: Project setup (week 1)
+## Milestone 0: Project setup (week 1) ✅
 - Folder structure, `pyproject.toml`, virtual env (`uv`, Python 3.11).
 - Git repo + GitHub.
 - **Done when:** `pytest` runs and passes.
 
-## Milestone 1: Synthetic attack graphs (weeks 1–2) ← *we are here*
+## Milestone 1: Synthetic attack graphs (weeks 1–2) ✅
 `src/attackpath/data/synthetic.py`
 - Generate a few hundred small fake company networks: workstations, servers,
   a domain controller and database servers (the critical assets), plus users and admins.
@@ -43,7 +43,7 @@ early, and every later step is an improvement, not a rescue.
   label attack edges.
 - **Done when:** all datasets share one common event format.
 
-## Milestone 3: Temporal graph builder (week 6)
+## Milestone 3: Temporal graph builder (week 6) ✅ (built early, on synthetic data)
 `src/attackpath/graph/builder.py`
 - Cut events into 1-hour windows → one graph snapshot per window.
 - Heterogeneous nodes (user, computer, …) and edge types (user→computer
