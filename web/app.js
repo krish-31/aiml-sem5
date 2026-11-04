@@ -230,56 +230,43 @@ const C = { gid: null, stage: 0, reveal: false, k: 3, playing: false, timer: nul
 function pageConsole(view) {
   view.innerHTML = `
   <div class="console">
-    <aside class="panel controls">
-      <div>
-        <div class="ctl-title">Scenario</div>
+    <section class="panel stage">
+      <div class="ctlbar">
         <select class="select" id="net-select" aria-label="Test network"><option>Loading networks</option></select>
-        <dl class="kv" id="net-meta"></dl>
-      </div>
-      <div>
-        <div class="ctl-title">Playback</div>
         <div class="player">
           <button class="icon-btn" id="prev" type="button" aria-label="Previous hop">${icon("prev")}</button>
           <button class="icon-btn play" id="play" type="button">${icon("play")}<span>Play</span></button>
           <button class="icon-btn" id="next" type="button" aria-label="Next hop">${icon("next")}</button>
         </div>
-        <div class="stage-label" id="stage-label"></div>
-      </div>
-      <div>
-        <div class="ctl-title">View</div>
+        <span class="stage-label" id="stage-label"></span>
+        <span class="ctl-sep"></span>
         <label class="switch-row"><span>Reveal true path</span>
           <button class="switch" id="reveal" type="button" role="switch" aria-checked="${C.reveal}"></button></label>
-        <div style="margin-top:16px">
-          <div class="muted" style="font-size:13px;margin-bottom:8px">Forecast paths on graph</div>
-          <div class="seg" id="kseg">${[1, 3, 5].map((k) => `<button type="button" data-k="${k}" aria-pressed="${k === C.k}">Top ${k}</button>`).join("")}</div>
-        </div>
-      </div>
-      <div>
-        <div class="ctl-title">Legend</div>
-        <div class="legend">
-          <span><i class="sw line" style="background:var(--attack)"></i>Attack so far</span>
-          <span><i class="sw dash" style="border-color:var(--predict)"></i>Forecast path</span>
-          <span><i class="sw dash" style="border-color:var(--truth);border-top-style:dotted"></i>True path (revealed)</span>
-          <span><i class="sw ring"></i>Recommended response</span>
-          <span><i class="sw dot" style="background:var(--attack)"></i>Compromised</span>
-          <span><i class="sw dia" style="background:var(--critical)"></i>Critical asset</span>
-          <span><i class="sw dot" style="background:var(--server)"></i>Server</span>
-          <span><i class="sw dot" style="background:var(--ws)"></i>Workstation</span>
-        </div>
-      </div>
-    </aside>
-
-    <section class="panel stage">
-      <div class="stage-head">
-        <div><h2 id="stage-title">Loading network</h2><div class="sub" id="stage-sub">&nbsp;</div></div>
-        <div class="stage-tools"><div class="clock" id="clock">--</div>
-          <a class="btn ghost sm" id="console-report" href="#" target="_blank" rel="noopener" title="Open a PDF report for this stage">Report PDF</a></div>
+        <a class="btn ghost sm" id="console-report" href="#" target="_blank" rel="noopener" title="Open a PDF report for this stage">Report PDF</a>
       </div>
       <div class="graph-wrap">
         <div class="graph" id="graph"></div>
+        <div class="map-top">
+          <div class="map-info"><b id="stage-title">Loading</b><span id="stage-sub"></span><span class="clock" id="clock">--</span></div>
+          <div class="seg" id="kseg" aria-label="Forecast paths shown">${[1, 3, 5].map((k) => `<button type="button" data-k="${k}" aria-pressed="${k === C.k}">Top ${k}</button>`).join("")}</div>
+        </div>
+        <div class="legend-float" aria-label="Legend">
+          <span><i class="sw line" style="background:var(--attack)"></i>Attack so far</span>
+          <span><i class="sw dot" style="background:var(--attack)"></i>Compromised</span>
+          <span><i class="sw dash" style="border-color:var(--predict)"></i>Forecast path</span>
+          <span><i class="sw dia" style="background:var(--critical)"></i>Critical asset</span>
+          <span><i class="sw dash" style="border-color:var(--truth);border-top-style:dotted"></i>True path</span>
+          <span><i class="sw dot" style="background:var(--server)"></i>Server</span>
+          <span><i class="sw ring"></i>Response</span>
+          <span><i class="sw dot" style="background:var(--ws)"></i>Workstation</span>
+        </div>
         <div class="loading" id="loading"><div><div class="spin"></div>Replaying logs and forecasting</div></div>
       </div>
       <div class="timeline" id="timeline"></div>
+    </section>
+
+    <aside class="side">
+      <div class="intel" id="intel"></div>
       <div class="term" id="term">
         <div class="term-head">
           <span class="term-title"><i class="term-dot"></i>Live event feed <span class="term-cmd">tail -f auth.log</span></span>
@@ -291,9 +278,7 @@ function pageConsole(view) {
         </div>
         <div class="term-body" id="term-body" aria-live="polite"></div>
       </div>
-    </section>
-
-    <aside class="intel" id="intel"></aside>
+    </aside>
   </div>`;
 
   $("#net-select").addEventListener("change", (e) => { C.gid = Number(e.target.value); C.stage = 0; stopPlay(); load(); });
@@ -321,8 +306,16 @@ function pageConsole(view) {
     if (e.key === "ArrowLeft") { stopPlay(); go(C.stage - 1); }
   };
   document.addEventListener("keydown", onKey);
+  let rz;
+  const onResize = () => { clearTimeout(rz); rz = setTimeout(draw, 120); };
+  window.addEventListener("resize", onResize);
   C.term.gid = null;
-  cleanup = () => { document.removeEventListener("keydown", onKey); stopPlay(); C.term.gid = null; };
+  cleanup = () => {
+    document.removeEventListener("keydown", onKey);
+    window.removeEventListener("resize", onResize);
+    stopPlay();
+    C.term.gid = null;
+  };
 
   api("/api/networks").then(({ networks, default: def }) => {
     if (C.gid == null || !networks.some((n) => n.id === C.gid)) C.gid = def;
@@ -395,23 +388,20 @@ function draw() {
   const { net, fc } = C;
   if (!net || !fc || !$("#graph")) return;
   const nm = (i) => net.nodes[i].name;
-  $("#stage-title").textContent = `${netName(net.id)}  ·  ${net.nodes.length} machines, ${net.users} users`;
-  $("#stage-sub").textContent = C.stage === 0
-    ? "Initial access detected. Forecasting the first lateral move."
-    : `${C.stage} hop${C.stage > 1 ? "s" : ""} observed. Attacker currently on ${nm(fc.current)}.`;
+  const crit = net.nodes.filter((n) => n.group === "critical").length;
+  $("#stage-title").textContent = `${netName(net.id)}`;
+  $("#stage-sub").textContent = `${net.nodes.length} machines · ${net.users} users · ${crit} critical`;
   $("#clock").innerHTML = `logs read to <b>${esc(fc.time.label)}</b>`;
   $("#console-report").href = `/api/report/${net.id}/${C.stage}`;
-  $("#net-meta").innerHTML = `
-    <dt>Machines</dt><dd>${net.nodes.length}</dd>
-    <dt>Critical assets</dt><dd>${net.nodes.filter((n) => n.group === "critical").length}</dd>
-    <dt>Attack length</dt><dd>${net.hops} hops</dd>
-    <dt>Split</dt><dd>test (unseen)</dd>`;
-  $("#stage-label").innerHTML = `Stage <b>${C.stage + 1}</b> of ${net.hops} · ${C.stage === 0 ? "entry only" : `${C.stage} hop${C.stage > 1 ? "s" : ""} seen`}`;
+  $("#stage-label").innerHTML = `Stage <b>${C.stage + 1}</b>/${net.hops} · ${C.stage === 0
+    ? "initial access" : `attacker on <b class="mono">${esc(nm(fc.current))}</b>`}`;
   $("#prev").disabled = C.stage === 0;
   $("#next").disabled = C.stage >= net.hops - 1;
   $("#reveal").setAttribute("aria-checked", String(C.reveal));
   $$("#kseg button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.k) === C.k)));
-  $("#graph").innerHTML = graphSVG(net, fc);
+  const box = $("#graph").getBoundingClientRect();
+  const ax = box.height > 0 ? Math.max(1, Math.min(1.7, (box.width / box.height) * 0.86)) : 1;
+  $("#graph").innerHTML = graphSVG(net, fc, C.k, C.reveal, ax);
   $("#timeline").innerHTML = timelineHTML(net, fc);
   $("#intel").innerHTML = intelHTML(net, fc);
   syncPlay();
@@ -536,8 +526,9 @@ async function feedTerm(token) {
 /* ------------------------------------------------------------ graph svg */
 const radius = (n) => (n.group === "critical" ? 0.045 : n.group === "server" ? 0.031 : 0.02);
 
-function graphSVG(net, fc, k = C.k, reveal = C.reveal) {
-  const nodes = net.nodes;
+/* ax stretches the layout horizontally (rings become ellipses) so wide panels are filled; nodes stay round. */
+function graphSVG(net, fc, k = C.k, reveal = C.reveal, ax = 1) {
+  const nodes = net.nodes.map((n) => ({ ...n, x: n.x * ax }));
   const held = new Set(fc.footholds);
   const P = fc.p_next;
   const top = new Set(fc.next_hops.slice(0, 3).map((h) => h.node));
@@ -589,9 +580,9 @@ function graphSVG(net, fc, k = C.k, reveal = C.reveal) {
       return `<text class="n-label ${cls}" x="${n.x}" y="${(n.y + radius(n) + 0.042).toFixed(3)}" text-anchor="middle">${esc(n.name)}</text>`;
     }).join("");
   const rings = [[0.24, "CRITICAL"], [0.6, "SERVERS"], [1.0, "WORKSTATIONS"]].map(([r, t]) =>
-    `<circle r="${r}" class="ring-guide"/><text class="ring-label" x="0" y="${-r - (r === 1 ? 0.05 : 0.02)}" text-anchor="middle">${t}</text>`).join("");
+    `<ellipse rx="${r * ax}" ry="${r}" class="ring-guide"/><text class="ring-label" x="0" y="${-r - (r === 1 ? 0.05 : 0.02)}" text-anchor="middle">${t}</text>`).join("");
 
-  return `<svg viewBox="-1.17 -1.13 2.34 2.3" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Network graph with forecast attack paths">
+  return `<svg viewBox="${(-1.1 * ax).toFixed(3)} -1.2 ${(2.2 * ax).toFixed(3)} 2.32" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Network graph with forecast attack paths">
     <defs>
       ${marker("m-pred", "var(--predict)")}${marker("m-attack", "var(--attack)")}
       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".01" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
