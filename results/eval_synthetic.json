@@ -85,9 +85,17 @@
     }
   },
   "defense": {
-    "mean_risk_drop": 0.5079580682227737,
-    "mean_normal_blocked": 0.05873323790460724,
-    "share_meeting_target": 0.49489795918367346,
-    "cuts_true_path": 0.6020408163265306
+    "mean_risk_drop": 0.2008595739577143,
+    "mean_normal_blocked": 0.0033651265541742455,
+    "share_meeting_target": 0.1326530612244898,
+    "cuts_true_path": 0.10714285714285714,
+    "n": 196
+  },
+  "containment": {
+    "mean_risk_drop": 0.511599825775575,
+    "mean_normal_blocked": 0.06394606666896396,
+    "share_meeting_target": 0.4897959183673469,
+    "cuts_true_path": 0.6071428571428571,
+    "n": 196
   }
 }

@@ -69,8 +69,9 @@ calibration → top-k paths → defense → console.
 | Attack caught before target | **73%** | 56% | n/a |
 
 - **Link forecast** (all traffic, next hour): AUC **0.970**, ECE 0.007 (synopsis target AUC ≥ 0.90).
-- **Defense**: the recommended action cuts path risk by **51%** on average while blocking **5.9%** of
-  normal traffic, and it cuts the attacker's real remaining path **60%** of the time.
+- **Defense**: the recommended **next cut** removes **20%** of path risk on average while blocking only **0.3%** of
+  normal traffic. Standard **containment** (isolating the compromised machine) removes **51%** at **6.4%** traffic cost.
+  Use both: contain first, then apply the next cut.
 
 Say it honestly: *"Next-hop is about 10× better than random and beats the rule-based baseline on every
 metric. The synthetic attacker still makes partly random choices, so 100% isn't possible; even a linear model

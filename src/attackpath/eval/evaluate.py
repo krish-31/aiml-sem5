@@ -4,7 +4,8 @@ Reports, for the temporal GNN and for simple baselines:
   - link forecasting: AUC, AP, ECE, Brier (does the model know which connections come next hour?)
   - next-hop forecasting: top-1/3/5 accuracy, MRR, calibration
   - attack-path forecasting: top-k path hit rate and time-to-detection
-  - defense: risk cut, normal traffic blocked, how often the action cuts the true remaining path
+  - defense: for the recommended next cut (best action beyond known compromised machines) and for
+    containment (isolating a compromised machine): risk cut, traffic blocked, cuts the true path
 
 Baselines:
   random    every possible next machine equally likely
@@ -71,7 +72,7 @@ def evaluate(model_path: str, graphs_path: str, defend: bool = True, verbose: bo
     hop = {m: ([], []) for m in methods}
     hits = {m: {k: [] for k in KS} for m in ("tgnn", "heuristic", "random")}
     first_hit = {m: [] for m in ("tgnn", "heuristic")}
-    defense = []
+    defense, containment = [], []
 
     for gi, g in enumerate(test):
         hours = prediction_hours(g)
@@ -103,9 +104,13 @@ def evaluate(model_path: str, graphs_path: str, defend: bool = True, verbose: bo
                         detected[name] = m
             if defend:
                 _, actions = recommend(P["tgnn"], fh, targets, normal, k=10)
-                if actions:
-                    a = actions[0]
-                    defense.append((a.risk_drop, a.blocked, cuts_true_path(a, remaining)))
+                is_contain = lambda a: a.kind == "isolate" and a.nodes[0] in fh  # noqa: E731
+                nxt = next((a for a in actions if not is_contain(a)), None)
+                con = next((a for a in actions if is_contain(a)), None)
+                if nxt:
+                    defense.append((nxt.risk_drop, nxt.blocked, cuts_true_path(nxt, remaining)))
+                if con:
+                    containment.append((con.risk_drop, con.blocked, cuts_true_path(con, remaining)))
         for name in first_hit:
             # hops of warning before the attacker reaches the target (0 = never predicted in time)
             first_hit[name].append(K - detected[name] if detected[name] is not None else 0)
@@ -127,14 +132,20 @@ def evaluate(model_path: str, graphs_path: str, defend: bool = True, verbose: bo
             for name, v in first_hit.items()
         },
     }
-    if defense:
-        d = np.array(defense, dtype=float)
-        res["defense"] = {
+    def summarize(rows):
+        d = np.array(rows, dtype=float)
+        return {
             "mean_risk_drop": float(d[:, 0].mean()),
             "mean_normal_blocked": float(d[:, 1].mean()),
             "share_meeting_target": float(((d[:, 0] >= 0.30) & (d[:, 1] < 0.10)).mean()),
             "cuts_true_path": float(d[:, 2].mean()),
+            "n": len(rows),
         }
+
+    if defense:
+        res["defense"] = summarize(defense)  # the recommended next cut
+    if containment:
+        res["containment"] = summarize(containment)
     return res
 
 
@@ -159,13 +170,14 @@ def report(res: dict) -> str:
     L.append("TIME TO DETECTION              caught before target   avg hops of warning")
     for k, m in res["time_to_detection"].items():
         L.append(f"  {k:<28}{m['detected_before_target']:.3f}                  {m['mean_hops_of_warning']:.2f}")
-    if "defense" in res:
-        d = res["defense"]
-        L.append("")
-        L.append(
-            f"DEFENSE  risk cut {d['mean_risk_drop']:.1%} | normal traffic blocked {d['mean_normal_blocked']:.1%} | "
-            f"meets ≥30%/<10% target {d['share_meeting_target']:.1%} | cuts true path {d['cuts_true_path']:.1%}"
-        )
+    for key, title in (("defense", "NEXT CUT   "), ("containment", "CONTAINMENT")):
+        if key in res:
+            d = res[key]
+            L.append("")
+            L.append(
+                f"{title}  risk cut {d['mean_risk_drop']:.1%} | normal traffic blocked {d['mean_normal_blocked']:.1%} | "
+                f"meets ≥30%/<10% target {d['share_meeting_target']:.1%} | cuts true path {d['cuts_true_path']:.1%}"
+            )
     return "\n".join(L)
 
 

@@ -58,8 +58,8 @@ function statTiles(ev) {
     ["predict", "Next hop in top 5", pct(nh.tgnn.top5), `random guess: ${pct(nh.random.top5)}`],
     ["attack", "Caught before target", pct(td.tgnn.detected_before_target), `rule-based: ${pct(td.heuristic.detected_before_target)}`],
     ["", "Next-hour link AUC", ev.link.calibrated.auc.toFixed(3), "target in synopsis: 0.90"],
-    ["defend", "Risk cut by response", d.mean_risk_drop != null ? pct(d.mean_risk_drop) : "n/a",
-      d.mean_normal_blocked != null ? `blocks ${pct(d.mean_normal_blocked, 1)} of normal traffic` : ""],
+    ["defend", "Risk cut by next cut", d.mean_risk_drop != null ? pct(d.mean_risk_drop) : "n/a",
+      d.mean_normal_blocked != null ? `blocks ${pct(d.mean_normal_blocked, 1)} of traffic · containment ${pct((ev.containment || {}).mean_risk_drop || 0)}` : ""],
   ];
   return tiles.map(([c, k, v, n], i) => `
     <div class="card stat ${c} fade-in d${i}"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
@@ -139,7 +139,7 @@ function pageLanding(view) {
       ["Next hop in top 5", pct(nh.tgnn.top5), `rule-based <b>${pct(nh.heuristic.top5)}</b> · random <b>${pct(nh.random.top5)}</b>`],
       ["Caught before target", pct(td.tgnn.detected_before_target), `rule-based <b>${pct(td.heuristic.detected_before_target)}</b>`],
       ["Next-hour link AUC", ev.link.calibrated.auc.toFixed(3), "synopsis target <b>0.90</b>"],
-      ["Risk cut by response", pct(d.mean_risk_drop || 0), `blocks <b>${pct(d.mean_normal_blocked || 0, 1)}</b> of normal traffic`],
+      ["Risk cut by next cut", pct(d.mean_risk_drop || 0), `blocks <b>${pct(d.mean_normal_blocked || 0, 1)}</b> of traffic · containment <b>${pct((ev.containment || {}).mean_risk_drop || 0)}</b>`],
     ].map(([k, n, sub]) => `<div><div class="k">${k}</div><div class="n">${n}</div><div class="s">${sub}</div></div>`).join("");
   }).catch(() => {});
 
@@ -760,7 +760,8 @@ function pageResults(view) {
       <div class="card note fade-in" style="margin-top:14px">
         <b>Reference</b>
         <span class="mono">Link forecast: AUC ${ev.link.calibrated.auc.toFixed(3)} · AP ${ev.link.calibrated.ap.toFixed(3)} · ECE ${ev.link.calibrated.ece.toFixed(3)}</span>
-        <span class="mono">Defense: risk cut ${pct(d.mean_risk_drop || 0)} · normal traffic blocked ${pct(d.mean_normal_blocked || 0, 1)} · cuts real path ${pct(d.cuts_true_path || 0)}</span>
+        <span class="mono">Next cut: risk cut ${pct(d.mean_risk_drop || 0)} · traffic blocked ${pct(d.mean_normal_blocked || 0, 1)} · cuts real path ${pct(d.cuts_true_path || 0)}</span>
+        ${ev.containment ? `<span class="mono">Containment: risk cut ${pct(ev.containment.mean_risk_drop)} · traffic blocked ${pct(ev.containment.mean_normal_blocked, 1)} · cuts real path ${pct(ev.containment.cuts_true_path)}</span>` : ""}
         <span class="mono">Model: ${(s.params || 0).toLocaleString()} parameters · split ${s.split.train}/${s.split.val}/${s.split.test} networks · temperature ${(s.temperatures.hop || 1).toFixed(2)}</span>
         <span>Synthetic data only so far. Full-path accuracy is low because a path needs 3–6 correct guesses in a row; "caught before target" is the more useful measure. LANL, CICIDS2017 and UNSW-NB15 come next.</span>
       </div>`;
