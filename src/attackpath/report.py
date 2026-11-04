@@ -197,7 +197,7 @@ def build_report(net: dict, fc: dict, events: dict | None, evaluation: dict | No
     story += [
         Paragraph(f"Incident forecast: {network}", S["h1"]),
         Paragraph(
-            f"Logs analysed up to <b>{fc['time']['label']}</b> · stage {stage + 1} of {K} "
+            f"Situation as of <b>{fc['as_of']['label']}</b> · stage {stage + 1} of {K} "
             f"({'initial access only' if stage == 0 else f'{stage} hop' + ('s' if stage > 1 else '') + ' observed'}) · "
             f"{len(nodes)} machines, {net['users']} users", S["sub"]),
         Spacer(1, 8),
@@ -273,7 +273,7 @@ def build_report(net: dict, fc: dict, events: dict | None, evaluation: dict | No
         for e in events["events"]:
             if e["attack"]:
                 hop_time[e["step"]] = min(hop_time.get(e["step"], e["time"]), e["time"])
-        cutoff = max((fc["hour"] + 1) * 3600 - 1, hop_time.get(stage, -1))
+        cutoff = fc["as_of"]["seconds"]
         flagged = [e for e in events["events"] if e["severity"] in ("high", "medium") and e["time"] <= cutoff]
         flagged.sort(key=lambda e: (e["severity"] != "high", -e["time"]))
         if flagged:

@@ -189,9 +189,11 @@ async function startIntercept() {
     log("--:--", "SYS", "k-sys", `replaying held-out attack on <b>${netName(net.id)}</b>`);
     for (let s = 0; s < K && alive(); s++) {
       const fc = fcs[s];
-      const t = fc.time.iso.slice(5, 16).replace("T", " ");
-      $("#ix-svg").innerHTML = graphSVG(net, fc, 2, false);
-      $("#ix-stage").textContent = `Stage ${s + 1}/${K} · ${fc.time.label}`;
+      const t = fc.as_of.iso.slice(5, 16).replace("T", " ");
+      const box = $("#ix-svg").getBoundingClientRect();
+      const ax = box.height > 0 ? Math.max(1, Math.min(1.6, (box.width / box.height) * 0.86)) : 1;
+      $("#ix-svg").innerHTML = graphSVG(net, fc, 2, false, ax);
+      $("#ix-stage").textContent = `Stage ${s + 1}/${K} · ${fc.as_of.label}`;
       await sleep(500);
       if (!alive()) return;
       if (s === 0) log(t, "ALERT", "k-alert", `initial access on <b>${nm(fc.current)}</b> · ${lbl(fc.current)}`);
@@ -246,13 +248,15 @@ function pageConsole(view) {
           <button class="switch" id="reveal" type="button" role="switch" aria-checked="${C.reveal}"></button></label>
         <a class="btn ghost sm" id="console-report" href="#" target="_blank" rel="noopener" title="Open a PDF report for this stage">Report PDF</a>
       </div>
+      <div class="map-bar">
+        <div class="map-info"><b id="stage-title">Loading</b><span id="stage-sub"></span><span class="clock" id="clock">--</span></div>
+        <div class="seg" id="kseg" aria-label="Forecast paths shown">${[1, 3, 5].map((k) => `<button type="button" data-k="${k}" aria-pressed="${k === C.k}">Top ${k}</button>`).join("")}</div>
+      </div>
       <div class="graph-wrap">
         <div class="graph" id="graph"></div>
-        <div class="map-top">
-          <div class="map-info"><b id="stage-title">Loading</b><span id="stage-sub"></span><span class="clock" id="clock">--</span></div>
-          <div class="seg" id="kseg" aria-label="Forecast paths shown">${[1, 3, 5].map((k) => `<button type="button" data-k="${k}" aria-pressed="${k === C.k}">Top ${k}</button>`).join("")}</div>
-        </div>
-        <div class="legend-float" aria-label="Legend">
+        <div class="loading" id="loading"><div><div class="spin"></div>Replaying logs and forecasting</div></div>
+      </div>
+      <div class="legend-bar" aria-label="Legend">
           <span><i class="sw line" style="background:var(--attack)"></i>Attack so far</span>
           <span><i class="sw dot" style="background:var(--attack)"></i>Compromised</span>
           <span><i class="sw dash" style="border-color:var(--predict)"></i>Forecast path</span>
@@ -261,8 +265,7 @@ function pageConsole(view) {
           <span><i class="sw dot" style="background:var(--server)"></i>Server</span>
           <span><i class="sw ring"></i>Response</span>
           <span><i class="sw dot" style="background:var(--ws)"></i>Workstation</span>
-        </div>
-        <div class="loading" id="loading"><div><div class="spin"></div>Replaying logs and forecasting</div></div>
+          <span><i class="sw next"></i>Most likely next</span>
       </div>
       <div class="timeline" id="timeline"></div>
     </section>
@@ -271,7 +274,7 @@ function pageConsole(view) {
       <div class="intel" id="intel"></div>
       <div class="term ${C.term.min ? "min" : ""}" id="term">
         <div class="term-head">
-          <span class="term-title"><i class="term-dot"></i>Live event feed <span class="term-cmd">tail -f auth.log</span></span>
+          <span class="term-title"><i class="term-dot"></i>Live event feed <a class="term-cmd" href="#/events" title="Open the full, searchable event log">full log</a></span>
           <span class="term-ctl">
             <span class="term-seg" id="term-filter">${[["all", "All"], ["flagged", "Flagged"]].map(([k, l]) =>
               `<button type="button" data-f="${k}" aria-pressed="${C.term.filter === k}">${l}</button>`).join("")}</span>
@@ -397,7 +400,7 @@ function draw() {
   const crit = net.nodes.filter((n) => n.group === "critical").length;
   $("#stage-title").textContent = `${netName(net.id)}`;
   $("#stage-sub").textContent = `${net.nodes.length} machines · ${net.users} users · ${crit} critical`;
-  $("#clock").innerHTML = `logs read to <b>${esc(fc.time.label)}</b>`;
+  $("#clock").innerHTML = `as of <b>${esc(fc.as_of.label)}</b>`;
   $("#console-report").href = `/api/report/${net.id}/${C.stage}`;
   $("#stage-label").innerHTML = `Stage <b>${C.stage + 1}</b>/${net.hops} · ${C.stage === 0
     ? "initial access" : `attacker on <b class="mono">${esc(nm(fc.current))}</b>`}`;
@@ -424,7 +427,7 @@ const ROLE_SHORT = {
 function stageCutoff(evData, fc, stage) {
   const hop = {};
   for (const e of evData.events) if (e.attack) hop[e.step] = Math.min(hop[e.step] ?? Infinity, e.time);
-  return Math.max((fc.hour + 1) * 3600 - 1, hop[stage] ?? -1);
+  return fc.as_of ? fc.as_of.seconds : Math.max((fc.hour + 1) * 3600 - 1, hop[stage] ?? -1);
 }
 
 function termLine(e) {
@@ -445,9 +448,7 @@ function termLine(e) {
 /* The model line is stamped with the latest moment it has seen: the forecast hour or the last observed event. */
 function termSys(fc, events, upto) {
   if (!C.net) return "";
-  const last = events.filter((e) => e.time <= upto).pop();
-  const hourLabel = fc.time.iso.replace("T", " ");
-  const at = last && last.label > hourLabel ? last.label : hourLabel;
+  const at = fc.as_of.iso.replace("T", " ");
   const nm = (i) => C.net.nodes[i].name;
   const top = fc.next_hops[0];
   const a = fc.actions[0];

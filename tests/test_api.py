@@ -86,3 +86,21 @@ def test_report_pdf(client):
     d = client.get(f"/api/report/{gid}/0?truth=0&download=1")
     assert "attachment" in d.headers["content-disposition"] and d.content[:5] == b"%PDF-"
     assert client.get(f"/api/report/{gid}/99").status_code == 404
+
+
+def test_stage_times_are_ordered_and_never_reveal_the_next_hop(client):
+    gid = client.get("/api/networks").json()["default"]
+    net = client.get(f"/api/network/{gid}").json()
+    hop = {}
+    for e in client.get(f"/api/events/{gid}").json()["events"]:
+        if e["attack"]:
+            hop[e["step"]] = min(hop.get(e["step"], e["time"]), e["time"])
+    prev = -1
+    for st in range(net["hops"]):
+        f = client.get(f"/api/forecast/{gid}/{st}").json()
+        t = f["as_of"]["seconds"]
+        assert t >= prev and t == net["stages"][st]["seconds"]
+        if st > 0:
+            assert t >= hop[st]  # the hop this stage reacts to has been seen
+        assert t < hop[st + 1]  # ...but not the one being forecast
+        prev = t

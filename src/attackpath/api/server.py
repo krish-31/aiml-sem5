@@ -125,6 +125,25 @@ def clock(hour: int) -> dict:
     }
 
 
+@lru_cache(maxsize=64)
+def hop_times(gid: int) -> tuple[int, ...]:
+    """Second at which each attack hop was first observed (hop 1, hop 2, ...)."""
+    ev = pd.read_parquet(EVENTS, columns=["graph_id", "time", "attack_step", "is_attack"],
+                         filters=[("graph_id", "==", gid), ("is_attack", "==", True)])
+    return tuple(int(t) for t in ev.groupby("attack_step")["time"].min().sort_index())
+
+
+def as_of(g, gid: int, stage: int) -> dict:
+    """The exact moment the analyst is at for a stage: the end of the last hour of logs the model read,
+    or the moment the latest hop was observed if that came later (hops can fall a few minutes into the hour)."""
+    seconds = g.attack_hop_windows[stage] * 3600
+    hops = hop_times(gid)
+    if stage > 0 and len(hops) >= stage:
+        seconds = max(seconds, hops[stage - 1])
+    when = stamp(seconds)
+    return {"seconds": int(seconds), "iso": when.isoformat(), "label": when.strftime("%a %d %b %Y · %H:%M:%S")}
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # warm up the model and the demo network in the background so the first click is instant
@@ -194,7 +213,7 @@ def network(gid: int) -> dict:
         "nodes": nodes,
         "users": g.num_users,
         "hops": len(g.attack_path) - 1,
-        "stages": [clock(w - 1) for w in g.attack_hop_windows],
+        "stages": [as_of(g, gid, k) for k in range(len(g.attack_hop_windows))],
     }
 
 
@@ -226,6 +245,7 @@ def forecast(gid: int, stage: int) -> dict:
         "stage": stage,
         "hour": f.hour,
         "time": clock(f.hour),
+        "as_of": as_of(g, gid, stage),
         "footholds": f.footholds,
         "current": f.current,
         "confidence": round(f.confidence, 4),
