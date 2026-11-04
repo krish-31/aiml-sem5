@@ -80,42 +80,6 @@ function sectionHead(n, label, title, text) {
   </div>`;
 }
 
-/* small illustrations for the three moves */
-const ART = {
-  observe: `<svg viewBox="0 0 300 190" aria-hidden="true">
-    ${[0, 1, 2].map((i) => {
-      const y = 38 + i * 38, x = 50 + i * 26, o = 0.35 + i * 0.3;
-      const pts = [[x + 30, y + 20], [x + 80, y + 10], [x + 120, y + 32], [x + 62, y + 40], [x + 150, y + 18]];
-      return `<g style="opacity:${o}">
-        <polygon points="${x},${y + 44} ${x + 40},${y} ${x + 200},${y} ${x + 160},${y + 44}" style="fill:var(--surface-2);stroke:var(--border-strong)"/>
-        <path d="M${pts[0]}L${pts[1]}L${pts[2]}M${pts[1]}L${pts[3]}M${pts[2]}L${pts[4]}" style="stroke:var(--muted)" stroke-width="1"/>
-        ${pts.map(([a, b], j) => `<circle cx="${a}" cy="${b}" r="3.2" style="fill:${i === 2 && j === 3 ? "var(--attack)" : "var(--text)"}"/>`).join("")}
-        <text x="${x + 206}" y="${y + 26}" style="fill:var(--faint);font:11px var(--mono)">t${i === 2 ? "" : `-${2 - i}`}</text>
-      </g>`;
-    }).join("")}
-  </svg>`,
-  forecast: `<svg viewBox="0 0 300 190" aria-hidden="true">
-    <circle cx="62" cy="95" r="9" style="fill:var(--attack)"/>
-    <circle cx="62" cy="95" r="18" style="fill:none;stroke:var(--attack);opacity:.35"/>
-    ${[[0.55, 34], [0.21, 74], [0.13, 114], [0.04, 154]].map(([p, y], i) => `
-      <path d="M72,95 C120,95 140,${y} 196,${y}" style="fill:none;stroke:var(--predict);stroke-width:${1 + p * 7};opacity:${0.3 + p}" ${i ? 'stroke-dasharray="4 4"' : ""}/>
-      <circle cx="202" cy="${y}" r="5" style="fill:var(--server)"/>
-      <rect x="216" y="${y - 4}" width="${p * 110}" height="8" rx="2" style="fill:var(--predict);opacity:${0.4 + p}"/>
-      <text x="${222 + p * 110}" y="${y + 4}" style="fill:var(--muted);font:10.5px var(--mono)">${Math.round(p * 100)}%</text>`).join("")}
-  </svg>`,
-  defend: `<svg viewBox="0 0 300 190" aria-hidden="true">
-    <path d="M30,140 L95,96 L150,118" style="fill:none;stroke:var(--attack);stroke-width:3"/>
-    <path d="M150,118 L196,70 L262,52" style="fill:none;stroke:var(--predict);stroke-width:2.5;stroke-dasharray:6 5;opacity:.35"/>
-    <circle cx="30" cy="140" r="6" style="fill:var(--attack)"/><circle cx="95" cy="96" r="6" style="fill:var(--attack)"/>
-    <circle cx="150" cy="118" r="7" style="fill:var(--attack)"/>
-    <circle cx="150" cy="118" r="20" style="fill:none;stroke:var(--defend);stroke-width:2.5;stroke-dasharray:5 4"/>
-    <circle cx="196" cy="70" r="6" style="fill:var(--server);opacity:.5"/>
-    <rect x="254" y="44" width="16" height="16" transform="rotate(45 262 52)" style="fill:var(--critical)"/>
-    <path d="M168,92 l14,-14 M182,92 l-14,-14" style="stroke:var(--defend);stroke-width:2.5;stroke-linecap:round"/>
-    <text x="118" y="160" style="fill:var(--defend);font:11px var(--mono)">ISOLATE · risk -100%</text>
-  </svg>`,
-};
-
 const PRIOR = [
   ["Bowman et al.", "RAID 2020", ["n", "n", "n", "n", "n"]],
   ["Euler", "NDSS 2022", ["y", "h", "n", "n", "n"]],
@@ -140,23 +104,15 @@ function versusTable() {
 function pageLanding(view) {
   view.innerHTML = `
   <div class="page">
-    <div class="case-strip fade-in">
-      <span>Case file <b>IS353IA / 2026-27</b></span>
-      <span>Subject <b>lateral movement</b></span>
-      <span>Method <b>temporal graph learning</b></span>
-      <span class="live">Live replay</span>
-    </div>
-
     <section class="hero">
       <div class="fade-in">
         <span class="eyebrow">Lateralis / attack-path forecasting</span>
         <h1>Intruders move <em>sideways.</em><br/>We see where they're <em class="p">heading.</em></h1>
-        <p class="lede">Breaches rarely end where they begin. An attacker lands on one workstation, steals a password and
-          hops machine to machine toward the servers that matter. <b>Lateralis</b> reads the network as a graph that changes
-          every hour, forecasts the next hop, ranks the routes to critical assets and recommends the cut that stops them.</p>
+        <p class="lede">Attackers hop from machine to machine toward critical servers. <b>Lateralis</b> forecasts the
+          next hop, ranks the likely paths and recommends the action that cuts them off.</p>
         <div class="cta">
           <a class="btn primary" href="#/console">Open the console ${icon("arrow")}</a>
-          <a class="btn ghost" href="#/method">How it works</a>
+          <a class="btn ghost" href="#/results">See results</a>
         </div>
       </div>
       <div class="card intercept fade-in d2" id="ix">
@@ -166,73 +122,24 @@ function pageLanding(view) {
       </div>
     </section>
 
-    <div class="ticker" aria-hidden="true"><div class="ticker-track" id="ticker"></div></div>
-
-    ${sectionHead("01", "The problem", "Attackers stay hidden for <em>months.</em>",
-      "Most detection tools judge each login on its own and raise the alarm after the damage. By then the attacker has walked a path across the network that nobody was watching as a whole.")}
-    <section class="numerals">
-      <div class="numeral r"><div class="n">263<small>days</small></div><p>average time to find and contain a breach in India in 2025.</p><span class="src">IBM Cost of a Data Breach, 2025</span></div>
-      <div class="numeral"><div class="n">₹22<small>crore</small></div><p>average cost of a single breach in India, 13% higher than the year before.</p><span class="src">IBM Cost of a Data Breach, 2025</span></div>
-      <div class="numeral"><div class="n">0.16<small>%</small></div><p>of login events in our data belong to the attack. The rest is normal work hiding it.</p><span class="src">Lateralis synthetic networks</span></div>
-    </section>
-
-    ${sectionHead("02", "The method", "Observe. Forecast. <em>Defend.</em>",
-      "Three moves, one pipeline. Each stage reads the previous one's output, from raw logs to a recommended action.")}
-    <section class="moves">
-      <article class="card move"><div class="move-art">${ART.observe}</div><div class="move-body">
-        <span class="roman">Step 01</span><h3>Observe</h3>
-        <p>Login and connection logs become one graph per hour. Users and machines are nodes, logins are edges,
-          each carrying clues such as new connections and time of day.</p>
-        <div class="tech">heterogeneous snapshots / 1 h windows</div></div></article>
-      <article class="card move"><div class="move-art">${ART.forecast}</div><div class="move-body">
-        <span class="roman">Step 02</span><h3>Forecast</h3>
-        <p>Graph attention reads each hour and a GRU remembers the past. Every machine gets a calibrated probability
-          of being the attacker's next hop.</p>
-        <div class="tech">2 x GAT + GRU / temperature scaling</div></div></article>
-      <article class="card move"><div class="move-art">${ART.defend}</div><div class="move-body">
-        <span class="roman">Step 03</span><h3>Defend</h3>
-        <p>The likeliest routes to the domain controller and databases are ranked, and a simulator picks the isolation
-          or access removal that cuts the most risk for the least disruption.</p>
-        <div class="tech">Yen's k-shortest paths / utility search</div></div></article>
-    </section>
-
-    ${sectionHead("03", "The gap", "Others answer <em>one</em> question. This answers four.",
-      "Prior work detects odd logins, predicts threats or finds static paths. None of it forecasts the next step, ranks full paths, calibrates its confidence and recommends a response in one system.")}
-    ${versusTable()}
-
-    ${sectionHead("04", "The evidence", "Tested on networks it has <em>never seen.</em>",
-      "45 held-out company networks, compared with a hand-written rule and random guessing under the same conditions.")}
     <section class="proof" id="proof">${'<div><div class="k">Loading</div><div class="n faint">--</div></div>'.repeat(4)}</section>
-    <div class="proof-foot"><span>Synthetic data for now. LANL, CICIDS2017 and UNSW-NB15 are next.</span>
-      <a class="btn ghost" href="#/results">Full results ${icon("arrow")}</a></div>
 
-    <section class="cta-band">
-      <div><h3>Watch an attack <em>unfold,</em><br/>one hop at a time.</h3>
-        <p>Replay a network the model has never seen and compare its forecast with what the attacker really did.</p></div>
-      <a class="btn" href="#/console">Launch console ${icon("arrow")}</a>
-    </section>
+    ${sectionHead("01", "Research gap", "One system for <em>all four</em> steps.",
+      "Prior work covers one or two of these. Lateralis joins them in one pipeline.")}
+    ${versusTable()}
 
     ${footer()}
   </div>`;
 
   api("/api/summary").then((s) => {
-    const ev = s.evaluation;
-    if (!ev) return;
+    const ev = s.evaluation, p = $("#proof");
+    if (!ev || !p) return;
     const nh = ev.next_hop, td = ev.time_to_detection, d = ev.defense || {};
-    const items = [
-      ["Next hop in top 5", pct(nh.tgnn.top5)], ["Caught before target", pct(td.tgnn.detected_before_target)],
-      ["Link AUC", ev.link.calibrated.auc.toFixed(3)], ["Calibration error", nh.tgnn.ece.toFixed(3)],
-      ["Risk cut", pct(d.mean_risk_drop || 0)], ["Normal traffic blocked", pct(d.mean_normal_blocked || 0, 1)],
-      ["Held-out networks", ev.n_test_networks], ["Parameters", (s.params || 0).toLocaleString()],
-    ];
-    const t = $("#ticker");
-    if (t) t.innerHTML = [...items, ...items].map(([k, v]) => `<span>${k}<b>${v}</b></span>`).join("");
-    const p = $("#proof");
-    if (p) p.innerHTML = [
+    p.innerHTML = [
       ["Next hop in top 5", pct(nh.tgnn.top5), `rule-based <b>${pct(nh.heuristic.top5)}</b> · random <b>${pct(nh.random.top5)}</b>`],
       ["Caught before target", pct(td.tgnn.detected_before_target), `rule-based <b>${pct(td.heuristic.detected_before_target)}</b>`],
-      ["Calibration error", nh.tgnn.ece.toFixed(3), `rule-based <b>${nh.heuristic.ece.toFixed(3)}</b> · lower is better`],
-      ["Risk cut by response", pct(d.mean_risk_drop || 0), `while blocking <b>${pct(d.mean_normal_blocked || 0, 1)}</b> of normal traffic`],
+      ["Next-hour link AUC", ev.link.calibrated.auc.toFixed(3), "synopsis target <b>0.90</b>"],
+      ["Risk cut by response", pct(d.mean_risk_drop || 0), `blocks <b>${pct(d.mean_normal_blocked || 0, 1)}</b> of normal traffic`],
     ].map(([k, n, sub]) => `<div><div class="k">${k}</div><div class="n">${n}</div><div class="s">${sub}</div></div>`).join("");
   }).catch(() => {});
 
@@ -669,30 +576,13 @@ function groupedBars({ cats, series, h = 230, max = 1, fmt = (v) => pct(v) }) {
   return `<svg viewBox="0 0 ${W} ${h}" role="img">${grid}<line class="axis" x1="${padL}" x2="${W - 8}" y1="${padT + ih}" y2="${padT + ih}"/>${bars}</svg>`;
 }
 
-function lineChart({ xs, lines, h = 230, best }) {
-  const W = 560, padL = 40, padB = 28, padT = 14, iw = W - padL - 12, ih = h - padB - padT;
-  const all = lines.flatMap((l) => l.values);
-  const lo = Math.max(0, Math.floor(Math.min(...all) * 10) / 10), hi = Math.min(1, Math.ceil(Math.max(...all) * 10) / 10);
-  const x = (v) => padL + (iw * (v - xs[0])) / Math.max(1, xs[xs.length - 1] - xs[0]);
-  const y = (v) => padT + ih - (ih * (v - lo)) / Math.max(1e-6, hi - lo);
-  const ticks = Array.from({ length: 5 }, (_, i) => lo + ((hi - lo) * i) / 4);
-  const grid = ticks.map((t) => `<line class="gridl" x1="${padL}" x2="${W - 12}" y1="${y(t)}" y2="${y(t)}"/><text x="${padL - 8}" y="${y(t) + 4}" text-anchor="end">${t.toFixed(2)}</text>`).join("");
-  const xt = xs.filter((_, i) => i % Math.ceil(xs.length / 8) === 0 || i === xs.length - 1)
-    .map((v) => `<text x="${x(v)}" y="${h - 8}" text-anchor="middle">${v}</text>`).join("");
-  const paths = lines.map((l) => `<path d="${l.values.map((v, i) => `${i ? "L" : "M"}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)}`).join("")}" fill="none" style="stroke:${l.color}" stroke-width="2.2" stroke-linejoin="round"/>` +
-    l.values.map((v, i) => `<circle cx="${x(xs[i])}" cy="${y(v)}" r="2.6" style="fill:${l.color}"/>`).join("")).join("");
-  const bestLine = best != null ? `<line x1="${x(best)}" x2="${x(best)}" y1="${padT}" y2="${padT + ih}" style="stroke:var(--accent)" stroke-dasharray="3 4"/><text x="${x(best) + 6}" y="${padT + 10}" style="fill:var(--accent)">best epoch ${best}</text>` : "";
-  return `<svg viewBox="0 0 ${W} ${h}" role="img">${grid}<line class="axis" x1="${padL}" x2="${W - 12}" y1="${padT + ih}" y2="${padT + ih}"/>${bestLine}${paths}${xt}</svg>`;
-}
-
 const legend = (items) => `<div class="chart-legend">${items.map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join("")}</div>`;
 
 function pageResults(view) {
   view.innerHTML = `<div class="page">
     <div class="page-head fade-in">
-      <div><span class="eyebrow">Evaluation</span><h1>How well does it forecast?</h1>
-        <p>Every number is measured on synthetic company networks the model never saw during training, against a
-          hand-written rule and random guessing under identical conditions.</p></div>
+      <div><span class="eyebrow">Results</span><h1>How well does it forecast?</h1>
+        <p>Measured on networks the model never saw in training, against a rule-based baseline and random guessing.</p></div>
       <span class="pill" id="res-pill">${icon("lock")} held-out test set</span>
     </div>
     <div id="res"><div class="stats">${'<div class="card stat"><div class="k">Loading</div><div class="v faint">--</div></div>'.repeat(4)}</div></div>
@@ -702,18 +592,17 @@ function pageResults(view) {
     const ev = s.evaluation, el = $("#res");
     if (!el) return;
     if (!ev) { el.innerHTML = `<div class="card note">No evaluation yet. Run <b>python -m attackpath.eval.evaluate</b>.</div>`; return; }
-    $("#res-pill").innerHTML = `${icon("lock")} ${ev.n_test_networks} unseen networks · ${ev.n_predictions} next-hop predictions`;
+    $("#res-pill").innerHTML = `${icon("lock")} ${ev.n_test_networks} unseen networks · ${ev.n_predictions} predictions`;
     const nh = ev.next_hop, ph = ev.path_hit_rate, td = ev.time_to_detection, d = ev.defense || {};
-    const OURS = "var(--accent)", RULE = "var(--server)", RAND = "var(--faint)";
-    const hist = s.history || [];
-    const bestEpoch = hist.length ? hist.reduce((b, r) => (r.val_loss < b.val_loss ? r : b)).epoch : null;
+    const OURS = "var(--accent)", RULE = "var(--faint)", RAND = "var(--surface-3)";
     const methods = [["tgnn", "Temporal GNN (ours)"], ["tgnn_uncalibrated", "Temporal GNN, no calibration"], ["heuristic", "Rule-based baseline"], ["random", "Random guess"]];
-    const bestOf = (key) => Math.max(...methods.map(([m]) => nh[m][key]));
+    const bestOf = (key, low) => (low ? Math.min : Math.max)(...methods.filter(([m]) => m !== "random").map(([m]) => nh[m][key]));
+    const cell = (r, k, low) => `<td class="num ${r[k] === bestOf(k, low) ? "best" : ""}">${r[k].toFixed(3)}</td>`;
     el.innerHTML = `
       <div class="stats">${statTiles(ev)}</div>
       <div class="grid-2">
         <div class="card chart-card fade-in">
-          <h3>Next-hop accuracy</h3><div class="sub">Is the attacker's real next machine among the model's top k guesses?</div>
+          <h3>Next-hop accuracy</h3><div class="sub">Is the attacker's real next machine in the top k guesses?</div>
           <div class="chart">${groupedBars({ cats: ["Top 1", "Top 3", "Top 5"], series: [
             { color: OURS, values: [nh.tgnn.top1, nh.tgnn.top3, nh.tgnn.top5] },
             { color: RULE, values: [nh.heuristic.top1, nh.heuristic.top3, nh.heuristic.top5] },
@@ -721,7 +610,7 @@ function pageResults(view) {
           ${legend([[OURS, "Temporal GNN"], [RULE, "Rule-based"], [RAND, "Random"]])}
         </div>
         <div class="card chart-card fade-in d1">
-          <h3>Catching the attack early</h3><div class="sub">Share of attacks whose real remaining path enters the top 5 before the target is reached, and exact full-path hits.</div>
+          <h3>Attack paths</h3><div class="sub">Caught before the target, and exact full-path matches.</div>
           <div class="chart">${groupedBars({ cats: ["Caught before target", "Full path in top 5", "Full path in top 1"], series: [
             { color: OURS, values: [td.tgnn.detected_before_target, ph.tgnn.top5, ph.tgnn.top1] },
             { color: RULE, values: [td.heuristic.detected_before_target, ph.heuristic.top5, ph.heuristic.top1] },
@@ -729,46 +618,21 @@ function pageResults(view) {
           ${legend([[OURS, "Temporal GNN"], [RULE, "Rule-based"], [RAND, "Random"]])}
         </div>
       </div>
-      <div class="grid-2">
-        <div class="card chart-card fade-in">
-          <h3>Calibration error</h3><div class="sub">Expected calibration error of the top guess. Lower means "60% sure" really is right 60% of the time.</div>
-          <div class="chart">${groupedBars({ cats: ["Temporal GNN", "No calibration", "Rule-based"], max: 0.25, fmt: (v) => v.toFixed(2), series: [
-            { color: "var(--defend)", values: [nh.tgnn.ece, nh.tgnn_uncalibrated.ece, nh.heuristic.ece] }] })}</div>
-        </div>
-        <div class="card chart-card fade-in d1">
-          <h3>Training curve</h3><div class="sub">Validation scores per epoch. Early stopping keeps the epoch with the lowest validation loss.</div>
-          <div class="chart">${hist.length ? lineChart({ xs: hist.map((r) => r.epoch), best: bestEpoch, lines: [
-            { color: OURS, values: hist.map((r) => r.val_link_auc) },
-            { color: "var(--predict)", values: hist.map((r) => r.val_hop_top3) }] }) : '<div class="empty">No training history.</div>'}</div>
-          ${legend([[OURS, "Link AUC"], ["var(--predict)", "Next hop top-3"]])}
-        </div>
-      </div>
       <div class="card fade-in" style="margin-top:14px;overflow-x:auto">
         <table class="table">
-          <thead><tr><th>Method</th><th class="num">Top 1</th><th class="num">Top 3</th><th class="num">Top 5</th><th class="num">MRR</th><th class="num">NLL</th><th class="num">ECE</th></tr></thead>
+          <thead><tr><th>Next hop</th><th class="num">Top 1</th><th class="num">Top 3</th><th class="num">Top 5</th><th class="num">MRR</th><th class="num">ECE</th></tr></thead>
           <tbody>${methods.map(([m, label]) => {
             const r = nh[m];
-            const cell = (k, inv) => {
-              const best = inv ? Math.min(...methods.filter(([x]) => x !== "random").map(([x]) => nh[x][k])) : bestOf(k);
-              return `<td class="num ${r[k] === best ? "best" : ""}">${r[k].toFixed(3)}</td>`;
-            };
-            return `<tr class="${m === "tgnn" ? "ours" : ""}"><td>${label}</td>${cell("top1")}${cell("top3")}${cell("top5")}${cell("mrr")}${cell("nll", true)}<td class="num">${r.ece.toFixed(3)}</td></tr>`;
+            return `<tr class="${m === "tgnn" ? "ours" : ""}"><td>${label}</td>${cell(r, "top1")}${cell(r, "top3")}${cell(r, "top5")}${cell(r, "mrr")}<td class="num">${r.ece.toFixed(3)}</td></tr>`;
           }).join("")}</tbody>
         </table>
       </div>
-      <div class="grid-3">
-        <div class="card note"><b>Link forecasting</b>Which connections appear in the next hour, over all traffic.
-          <span class="mono">AUC ${ev.link.calibrated.auc.toFixed(3)} · AP ${ev.link.calibrated.ap.toFixed(3)} · ECE ${ev.link.calibrated.ece.toFixed(3)}</span></div>
-        <div class="card note"><b>Defense simulator</b>Recommended action on average:
-          <span class="mono">risk cut ${pct(d.mean_risk_drop || 0)} · traffic blocked ${pct(d.mean_normal_blocked || 0, 1)} · cuts real path ${pct(d.cuts_true_path || 0)}</span></div>
-        <div class="card note"><b>Model</b>${(s.params || 0).toLocaleString()} parameters · trained on ${s.split.train} networks, tuned on ${s.split.val}, tested on ${s.split.test}.
-          <span class="mono">temperature T = ${(s.temperatures.hop || 1).toFixed(2)}</span></div>
-      </div>
       <div class="card note fade-in" style="margin-top:14px">
-        <b>Reading these numbers honestly</b>
-        <span>The synthetic attacker still makes partly random choices, so no model can be right every time. A linear model on the same history features tops out near the same next-hop accuracy, which suggests the remaining error is in the data, not the model.</span>
-        <span>Exact full-path accuracy is far below next-hop accuracy because a path needs 3 to 6 correct guesses in a row. Time-to-detection is the more useful path metric for defenders.</span>
-        <span>All results are on synthetic networks. The LANL, CICIDS2017 and UNSW-NB15 datasets are the next milestone.</span>
+        <b>Reference</b>
+        <span class="mono">Link forecast: AUC ${ev.link.calibrated.auc.toFixed(3)} · AP ${ev.link.calibrated.ap.toFixed(3)} · ECE ${ev.link.calibrated.ece.toFixed(3)}</span>
+        <span class="mono">Defense: risk cut ${pct(d.mean_risk_drop || 0)} · normal traffic blocked ${pct(d.mean_normal_blocked || 0, 1)} · cuts real path ${pct(d.cuts_true_path || 0)}</span>
+        <span class="mono">Model: ${(s.params || 0).toLocaleString()} parameters · split ${s.split.train}/${s.split.val}/${s.split.test} networks · temperature ${(s.temperatures.hop || 1).toFixed(2)}</span>
+        <span>Synthetic data only so far. Full-path accuracy is low because a path needs 3–6 correct guesses in a row; "caught before target" is the more useful measure. LANL, CICIDS2017 and UNSW-NB15 come next.</span>
       </div>`;
   }).catch(() => {
     const el = $("#res");
@@ -780,57 +644,39 @@ function pageResults(view) {
 function pageMethod(view) {
   view.innerHTML = `<div class="page">
     <div class="page-head fade-in">
-      <div><span class="eyebrow">Method</span><h1>Inside the model</h1>
-        <p>A temporal graph neural network reads the network one hour at a time, then path search and a defense
-          simulator turn its probabilities into a decision.</p></div>
+      <div><span class="eyebrow">Method</span><h1>How it works</h1>
+        <p>A temporal graph neural network reads the network hour by hour; path search and a defense simulator turn
+          its probabilities into a decision.</p></div>
     </div>
 
     <section class="card arch fade-in">
-      <div class="arch-box in"><span class="lbl">Input</span><h4>Hourly snapshot</h4><p>Users and computers as nodes; "connects" and "logs on" edges with counts. 10 computer and 8 user features.</p></div>
-      <div class="arch-box enc"><span class="lbl">Encoder</span><h4>2 x hetero GAT</h4><p>Graph attention with 4 heads and separate weights per edge type, hidden size 64, residual links.</p></div>
-      <div class="arch-box mem"><span class="lbl">Memory</span><h4>GRU per node</h4><p>Carries each node's state from hour to hour, so the model remembers what happened before.</p></div>
-      <div class="arch-box head"><span class="lbl">Heads</span><h4>Link + next hop</h4><p>Two MLPs score node pairs together with history facts such as shared users and credential value.</p></div>
-      <div class="arch-box out"><span class="lbl">Decision</span><h4>Paths + response</h4><p>Calibrated move probabilities feed Yen's k-shortest paths and the defense simulator.</p></div>
+      <div class="arch-box in"><span class="lbl">Input</span><h4>Hourly graph</h4><p>Users and machines as nodes, logins as edges.</p></div>
+      <div class="arch-box enc"><span class="lbl">Encoder</span><h4>2 x GAT</h4><p>Graph attention, 4 heads, hidden size 64.</p></div>
+      <div class="arch-box mem"><span class="lbl">Memory</span><h4>GRU</h4><p>Carries each node's state across hours.</p></div>
+      <div class="arch-box head"><span class="lbl">Heads</span><h4>Link + next hop</h4><p>Calibrated with temperature scaling.</p></div>
+      <div class="arch-box out"><span class="lbl">Decision</span><h4>Paths + response</h4><p>Yen's top-k paths, defense simulator.</p></div>
     </section>
 
-    <div class="grid-2">
+    <div class="grid-3">
       <div class="card prose fade-in">
         <h3>Data</h3>
-        <p>Public logs mark single attack events but never the complete route an attacker took, so the project
-          generates <b>300 synthetic company networks</b>: 25 to 70 workstations, servers, a domain controller and
-          databases, 7 days of normal logins (office hours, hot-desking, admins on jump hosts) and one 3 to 6 hop attack.</p>
-        <p>The attacker is goal-driven: it dumps credentials on each machine it holds and prefers machines where
-          administrators log on (MITRE ATT&amp;CK T1003). Attacks are only <b>0.16%</b> of events.</p>
-        <p>Next: <b>LANL</b> authentication logs (1.6 billion events with red-team labels), <b>CICIDS2017</b> and
-          <b>UNSW-NB15</b>.</p>
+        <p><b>300 synthetic networks</b> with 7 days of normal logins and one 3–6 hop attack each. The attacker
+          steals credentials and prefers admin machines. Attacks are <b>0.16%</b> of events.</p>
       </div>
       <div class="card prose fade-in d1">
         <h3>Training</h3>
-        <p>Networks are split <b>210 / 45 / 45</b> into train, validation and test, so the model is always judged on
-          companies it has never seen. Every prediction for hour <code>t+1</code> uses only hours up to <code>t</code>.</p>
-        <p>Two losses are trained together: binary cross-entropy with <b>negative sampling</b> for next-hour links,
-          and cross-entropy over all machines for the attacker's next hop. Adam, learning rate 0.001, dropout 0.2,
-          gradient clipping, early stopping on validation loss.</p>
-        <p><b>Temperature scaling</b> is then fitted on the validation set so probabilities can be trusted.</p>
+        <p>Split <b>210 / 45 / 45</b> by network. Predictions for hour <code>t+1</code> use only hours up to
+          <code>t</code>. Cross-entropy with negative sampling, Adam, early stopping.</p>
       </div>
-      <div class="card prose fade-in">
-        <h3>Path ranking</h3>
-        <p>Each possible move <code>u to v</code> costs <code>-log P(v | u)</code>. The cheapest routes are the most
-          likely ones, so <b>Yen's k-shortest simple paths</b> lists the top-k routes from any machine the attacker
-          holds to any critical asset. A path's score is the product of its hop probabilities.</p>
-      </div>
-      <div class="card prose fade-in d1">
-        <h3>Defense simulator</h3>
-        <p>Candidate actions are isolating a machine on a likely path or revoking one access. For each, the move
-          probabilities are re-normalised, paths are ranked again, and</p>
-        <p><code>utility = risk removed / risk before - normal traffic blocked</code></p>
-        <p>The action with the highest utility is recommended. Nothing touches a real system.</p>
+      <div class="card prose fade-in d2">
+        <h3>Paths and defense</h3>
+        <p>Each move costs <code>-log p</code>; Yen's algorithm ranks the top-k routes. The simulator picks the action with
+          the best <code>risk removed - traffic blocked</code>.</p>
       </div>
     </div>
 
     <div class="card prose fade-in" style="margin-top:14px">
-      <h3>Stack</h3>
-      <div class="chips">${["Python 3.11", "PyTorch", "PyTorch Geometric", "NetworkX", "pandas", "scikit-learn", "FastAPI", "Vanilla JS + SVG"].map((c) => `<span class="chip">${c}</span>`).join("")}</div>
+      <div class="chips">${["Python 3.11", "PyTorch", "PyTorch Geometric", "NetworkX", "scikit-learn", "FastAPI"].map((c) => `<span class="chip">${c}</span>`).join("")}</div>
     </div>
     ${footer()}
   </div>`;
