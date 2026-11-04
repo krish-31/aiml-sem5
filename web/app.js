@@ -615,14 +615,24 @@ function onGraphHover(e) {
 function timelineHTML(net, fc) {
   const full = fc.footholds.concat(fc.truth.remaining.slice(1));
   const K = net.hops;
+  const nm = (i) => net.nodes[i].name;
+  // what the model expects for steps that have not happened yet
+  const nextGuess = fc.next_hops[0];
+  const best = fc.paths[0];
+  const targetGuess = best ? best.nodes[best.nodes.length - 1] : null;
+  const targetProb = best ? fc.paths.filter((p) => p.nodes[p.nodes.length - 1] === targetGuess).reduce((t, p) => t + p.prob, 0) : 0;
   return Array.from({ length: K + 1 }, (_, i) => {
     const known = i <= C.stage || C.reveal;
-    const name = known ? net.nodes[full[i]].name : "? ? ?";
-    const cls = [i <= C.stage ? "done" : "", i === C.stage ? "now" : "", i === K ? "target" : ""].join(" ");
+    let name = "? ? ?", guess = "";
+    if (known) name = esc(nm(full[i]));
+    else if (i === C.stage + 1 && nextGuess) { name = esc(nm(nextGuess.node)); guess = `forecast ${pct(nextGuess.prob)}`; }
+    else if (i === K && targetGuess != null) { name = esc(nm(targetGuess)); guess = `likely target`; }
+    const cls = [i <= C.stage ? "done" : "", i === C.stage ? "now" : "", i === K ? "target" : "", guess ? "guess" : ""].join(" ");
     const t1 = i === 0 ? "ENTRY" : i === K ? "TARGET" : `HOP ${i}`;
     const clickable = i < K;
-    return `<button type="button" class="tl-step ${cls}" ${clickable ? `data-stage="${i}"` : "disabled"} aria-label="${t1}">
-      <span class="tl-dot"></span><span class="t1">${t1}</span><span class="t2">${esc(name)}</span></button>`;
+    const title = guess ? ` title="${guess}${i === K ? `: ${pct(targetProb)} of top-path risk ends here` : ""}"` : "";
+    return `<button type="button" class="tl-step ${cls}" ${clickable ? `data-stage="${i}"` : "disabled"} aria-label="${t1}"${title}>
+      <span class="tl-dot"></span><span class="t1">${t1}${guess ? ` <em>${guess}</em>` : ""}</span><span class="t2">${name}</span></button>`;
   }).join("");
 }
 

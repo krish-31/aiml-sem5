@@ -858,3 +858,6 @@ main { outline: none; }
 .next-tag { fill: var(--predict); }
 .next-text { font-family: var(--mono); font-size: .036px; font-weight: 600; fill: #1a1204; letter-spacing: .002px; pointer-events: none; }
 .side .block .row { padding: 6px 8px; }
+.tl-step.guess .t2 { color: var(--predict); }
+.tl-step.guess .tl-dot { border-color: var(--predict); border-style: dashed; }
+.tl-step .t1 em { font-style: normal; color: var(--predict); margin-left: 6px; letter-spacing: 0; text-transform: none; }
