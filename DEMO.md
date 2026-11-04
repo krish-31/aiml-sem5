@@ -9,42 +9,44 @@ uv pip install --python .venv/bin/python -e ".[dev,ml,app]"
 .venv/bin/python -m attackpath.models.train                       # ~15–25 min on a laptop CPU
 .venv/bin/python -m attackpath.eval.evaluate                      # ~2 min
 ```
-Then start the dashboard and leave it open:
+Then start the web app and leave it open:
 ```bash
-.venv/bin/streamlit run app/dashboard.py
+.venv/bin/python -m attackpath.api.server
 ```
-Open http://localhost:8501. Click through one network once before the meeting so its forecasts are cached
-and the demo has no waiting.
+Open http://127.0.0.1:8000. It opens on the **Overview** page; the sun/moon button switches dark and light mode.
+Open the **Live console** once before the meeting so the demo network is warmed up.
+(The older Streamlit dashboard still works as a backup: `.venv/bin/streamlit run app/dashboard.py`.)
 
 ---
 
 ## The 5-minute demo
 
-### 1. The problem (30 s, "How it works" tab)
+### 1. The problem (30 s, Overview page)
 > "Attackers don't hit the database in one step. They break into one PC, steal passwords, and hop
 > machine to machine. In India a breach takes about 263 days to find. Most tools judge each login on its own.
 > I want to **forecast the next hop** and **block it before it happens**."
 
-Point at the 8-box pipeline: logs → hourly graph → temporal GNN → calibration → top-k paths → defense → dashboard.
+Scroll to "Observe. Forecast. Defend." and the 8-stage pipeline: logs → hourly graph → temporal GNN →
+calibration → top-k paths → defense → console.
 
-### 2. Live forecast (2.5 min, "Live forecast" tab)
+### 2. Live forecast (2.5 min, Live console page)
 1. Pick a network. Say: *"This company is from the test set; the model has never seen it."*
 2. **Slider at 0.** *"We only know one PC is infected (red). The model reads the logs up to now and gives
    each machine a probability of being the next hop (bigger dot = more likely). The orange lines are the most
    likely complete routes to the domain controller or database (purple diamonds)."*
 3. Point at **Recommended defense**: *"The simulator tried isolating machines and removing access, and
    picked the action that cuts the most risk while blocking the least normal traffic."*
-4. **Move the slider forward.** The attacker moves (red trail), the forecast updates, and the risk usually rises
+4. **Press the next arrow (or Play, or the → key).** The attacker moves (red trail), the forecast updates, and the risk usually rises
    as they get closer.
-5. **Turn on "Reveal where the attacker really goes".** The dotted line is the truth. Show ✅ where the
-   model's top guesses match.
+5. **Turn on "Reveal true path".** The dotted line is the truth. Rows marked ACTUAL and
+   paths marked "matches real path" show where the model was right. The timeline at the bottom fills in too.
 
 **Good networks to show** (all from the test set):
 - **#62** (default, 3 hops): the true next hop is in the top 3 at every step. At 1 hop observed, the model's
   #1 guess (C57) is exactly right and the real path is in the top 5.
 - **#184** (6 hops): a longer attack. The true next hop is in the top 3 for 5 of 6 hops.
 
-### 3. Results (1 min, "Results" tab)
+### 3. Results (1 min, Results page)
 45 unseen test networks, 196 next-hop predictions:
 
 | | Temporal GNN | Rule-based | Random |
