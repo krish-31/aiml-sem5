@@ -225,7 +225,8 @@ async function startIntercept() {
 
 /* ================================================================ console */
 const C = { gid: null, stage: 0, reveal: false, k: 3, playing: false, timer: null, token: 0, net: null, fc: null,
-  term: { gid: null, upto: -1, filter: "all", stage: -1 } };
+  term: { gid: null, upto: -1, filter: "all", stage: -1, min: false, unread: 0 } };
+try { C.term.min = localStorage.getItem("lateralis-feed-min") === "1"; } catch (e) { /* storage blocked */ }
 
 function pageConsole(view) {
   C.page = "console";
@@ -268,13 +269,16 @@ function pageConsole(view) {
 
     <aside class="side">
       <div class="intel" id="intel"></div>
-      <div class="term" id="term">
+      <div class="term ${C.term.min ? "min" : ""}" id="term">
         <div class="term-head">
           <span class="term-title"><i class="term-dot"></i>Live event feed <span class="term-cmd">tail -f auth.log</span></span>
           <span class="term-ctl">
             <span class="term-seg" id="term-filter">${[["all", "All"], ["flagged", "Flagged"]].map(([k, l]) =>
               `<button type="button" data-f="${k}" aria-pressed="${C.term.filter === k}">${l}</button>`).join("")}</span>
             <span class="term-status" id="term-status">connecting</span>
+            <span class="term-new" id="term-new" hidden></span>
+            <button class="term-min" id="term-min" type="button" aria-expanded="${!C.term.min}"
+              title="${C.term.min ? "Expand" : "Minimize"} event feed">${icon("prev")}</button>
           </span>
         </div>
         <div class="term-body" id="term-body" aria-live="polite"></div>
@@ -287,6 +291,7 @@ function pageConsole(view) {
   $("#next").addEventListener("click", () => { stopPlay(); go(C.stage + 1); });
   $("#play").addEventListener("click", togglePlay);
   $("#reveal").addEventListener("click", () => { C.reveal = !C.reveal; draw(); termRedraw(); });
+  $("#term-min").addEventListener("click", () => setTermMin(!C.term.min));
   $$("#term-filter button").forEach((b) => b.addEventListener("click", () => {
     C.term.filter = b.dataset.f;
     $$("#term-filter button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
@@ -468,6 +473,25 @@ function termStatus(text, live) {
   el.classList.toggle("live", !!live);
 }
 
+function setTermMin(min) {
+  C.term.min = min;
+  try { localStorage.setItem("lateralis-feed-min", min ? "1" : "0"); } catch (e) { /* storage blocked */ }
+  const t = $("#term"), b = $("#term-min");
+  if (!t || !b) return;
+  t.classList.toggle("min", min);
+  b.setAttribute("aria-expanded", String(!min));
+  b.title = `${min ? "Expand" : "Minimize"} event feed`;
+  if (!min) { C.term.unread = 0; termScroll(); }
+  termUnread();
+}
+
+function termUnread() {
+  const el = $("#term-new");
+  if (!el) return;
+  el.hidden = !(C.term.min && C.term.unread > 0);
+  el.textContent = `${C.term.unread} new`;
+}
+
 const CURSOR = '<div class="t-line t-cursor"><span class="cursor"></span></div>';
 
 /* Instant re-render up to what has already been streamed (filter change, reveal, going back). */
@@ -516,6 +540,7 @@ async function feedTerm(token) {
   for (const e of shown) {
     if (token !== C.token || !$("#term-body")) return;
     body.insertAdjacentHTML("beforeend", termLine(e));
+    if (C.term.min) { C.term.unread += 1; termUnread(); }
     termScroll();
     await sleep(delay);
   }

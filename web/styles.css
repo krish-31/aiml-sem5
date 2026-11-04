@@ -861,3 +861,18 @@ main { outline: none; }
 .tl-step.guess .t2 { color: var(--predict); }
 .tl-step.guess .tl-dot { border-color: var(--predict); border-style: dashed; }
 .tl-step .t1 em { font-style: normal; color: var(--predict); margin-left: 6px; letter-spacing: 0; text-transform: none; }
+
+/* minimizable event feed */
+.term-min {
+  width: 24px; height: 24px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  border-radius: 5px; border: 1px solid rgba(148, 163, 184, .2); background: transparent; color: var(--t-ts);
+}
+.term-min:hover { color: var(--t-text); background: rgba(148, 163, 184, .1); }
+.term-min svg { width: 13px; height: 13px; transform: rotate(-90deg); transition: transform .2s; }
+.term.min .term-min svg { transform: rotate(90deg); }
+.term-new {
+  padding: 1px 7px; border-radius: 10px; background: var(--t-high); color: #0b0f19;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
+}
+.term.min .term-body, .term.min .term-seg { display: none; }
+.side .term.min { flex: 0 0 auto; height: auto; }
