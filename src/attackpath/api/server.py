@@ -30,6 +30,7 @@ from attackpath.eventlog import build_event_log
 from attackpath.graph.builder import load_graphs, split_graphs
 from attackpath.inference import forecast_all, normal_traffic
 from attackpath.models.tgnn import load_model
+from attackpath.replaytime import stamp
 from attackpath.report import build_report, report_filename
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -110,10 +111,17 @@ def layout(g, roles: dict[str, str]) -> list[tuple[float, float]]:
 
 
 def clock(hour: int) -> dict:
-    """Window index -> readable time. Window t covers [t, t+1) hours; the model has read up to the end of it."""
+    """Window index -> calendar time. Window t covers [t, t+1) hours; the model has read up to the end of it."""
     end = hour + 1
     day, hh = divmod(end, 24)
-    return {"day": day + 1, "weekday": DAYS[day % 7], "hour": hh, "label": f"Day {day + 1} · {DAYS[day % 7]} {hh:02d}:00"}
+    when = stamp(end * 3600)
+    return {
+        "day": day + 1,
+        "weekday": DAYS[day % 7],
+        "hour": hh,
+        "iso": when.isoformat(),
+        "label": when.strftime("%a %d %b %Y · %H:%M"),
+    }
 
 
 @asynccontextmanager

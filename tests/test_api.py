@@ -1,5 +1,7 @@
 """API smoke tests. Skipped when the trained model or processed data is not present."""
 
+import re
+
 import pytest
 
 from attackpath.api import server
@@ -59,6 +61,8 @@ def test_event_log_flags_attack_and_respects_time(client):
     assert summary["events"] == len(events) > 0
     assert [e["time"] for e in events] == sorted(e["time"] for e in events)
     assert all(data["window"]["start"] <= e["hour"] <= data["window"]["end"] for e in events)
+    # real calendar timestamps, e.g. 2026-10-31 15:02:42
+    assert all(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", e["label"]) for e in events)
     for e in events:
         if not e["remote"]:
             assert e["severity"] == "info" and e["unexpected"] is None

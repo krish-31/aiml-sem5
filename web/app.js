@@ -189,7 +189,7 @@ async function startIntercept() {
     log("--:--", "SYS", "k-sys", `replaying held-out attack on <b>${netName(net.id)}</b>`);
     for (let s = 0; s < K && alive(); s++) {
       const fc = fcs[s];
-      const t = `D${fc.time.day} ${String(fc.time.hour).padStart(2, "0")}:00`;
+      const t = fc.time.iso.slice(5, 16).replace("T", " ");
       $("#ix-svg").innerHTML = graphSVG(net, fc, 2, false);
       $("#ix-stage").textContent = `Stage ${s + 1}/${K} · ${fc.time.label}`;
       await sleep(500);
@@ -224,7 +224,8 @@ async function startIntercept() {
 }
 
 /* ================================================================ console */
-const C = { gid: null, stage: 0, reveal: false, k: 3, playing: false, timer: null, token: 0, net: null, fc: null };
+const C = { gid: null, stage: 0, reveal: false, k: 3, playing: false, timer: null, token: 0, net: null, fc: null,
+  term: { gid: null, upto: -1, filter: "all", stage: -1 } };
 
 function pageConsole(view) {
   view.innerHTML = `
@@ -279,6 +280,17 @@ function pageConsole(view) {
         <div class="loading" id="loading"><div><div class="spin"></div>Replaying logs and forecasting</div></div>
       </div>
       <div class="timeline" id="timeline"></div>
+      <div class="term" id="term">
+        <div class="term-head">
+          <span class="term-title"><i class="term-dot"></i>Live event feed <span class="term-cmd">tail -f auth.log</span></span>
+          <span class="term-ctl">
+            <span class="term-seg" id="term-filter">${[["all", "All"], ["flagged", "Flagged"]].map(([k, l]) =>
+              `<button type="button" data-f="${k}" aria-pressed="${C.term.filter === k}">${l}</button>`).join("")}</span>
+            <span class="term-status" id="term-status">connecting</span>
+          </span>
+        </div>
+        <div class="term-body" id="term-body" aria-live="polite"></div>
+      </div>
     </section>
 
     <aside class="intel" id="intel"></aside>
@@ -288,7 +300,12 @@ function pageConsole(view) {
   $("#prev").addEventListener("click", () => { stopPlay(); go(C.stage - 1); });
   $("#next").addEventListener("click", () => { stopPlay(); go(C.stage + 1); });
   $("#play").addEventListener("click", togglePlay);
-  $("#reveal").addEventListener("click", () => { C.reveal = !C.reveal; draw(); });
+  $("#reveal").addEventListener("click", () => { C.reveal = !C.reveal; draw(); termRedraw(); });
+  $$("#term-filter button").forEach((b) => b.addEventListener("click", () => {
+    C.term.filter = b.dataset.f;
+    $$("#term-filter button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    termRedraw();
+  }));
   $$("#kseg button").forEach((b) => b.addEventListener("click", () => { C.k = Number(b.dataset.k); draw(); }));
   $("#timeline").addEventListener("click", (e) => {
     const b = e.target.closest("[data-stage]");
@@ -304,7 +321,8 @@ function pageConsole(view) {
     if (e.key === "ArrowLeft") { stopPlay(); go(C.stage - 1); }
   };
   document.addEventListener("keydown", onKey);
-  cleanup = () => { document.removeEventListener("keydown", onKey); stopPlay(); };
+  C.term.gid = null;
+  cleanup = () => { document.removeEventListener("keydown", onKey); stopPlay(); C.term.gid = null; };
 
   api("/api/networks").then(({ networks, default: def }) => {
     if (C.gid == null || !networks.some((n) => n.id === C.gid)) C.gid = def;
@@ -363,6 +381,7 @@ async function load() {
     C.net = net;
     C.fc = fc;
     draw();
+    feedTerm(token);
     if (C.stage + 1 < net.hops) api(`/api/forecast/${C.gid}/${C.stage + 1}`).catch(() => {});
   } catch (e) {
     if ($("#graph")) $("#graph").innerHTML = `<div class="empty" style="padding-top:80px">Could not load this forecast (${esc(e.message)}).</div>`;
@@ -396,6 +415,122 @@ function draw() {
   $("#timeline").innerHTML = timelineHTML(net, fc);
   $("#intel").innerHTML = intelHTML(net, fc);
   syncPlay();
+}
+
+/* ------------------------------------------------------- live event feed */
+const ROLE_SHORT = {
+  workstation: "workstation", file_server: "file server", mail_server: "mail server", app_server: "app server",
+  web_server: "web server", print_server: "print server", domain_controller: "domain controller", database: "database",
+};
+
+/* Latest moment the analyst has seen at this stage: logs up to the forecast hour, plus hops already observed. */
+function stageCutoff(evData, fc, stage) {
+  const hop = {};
+  for (const e of evData.events) if (e.attack) hop[e.step] = Math.min(hop[e.step] ?? Infinity, e.time);
+  return Math.max((fc.hour + 1) * 3600 - 1, hop[stage] ?? -1);
+}
+
+function termLine(e) {
+  const flagged = e.severity === "high" || e.severity === "medium";
+  const route = e.remote ? `${esc(e.src)} → ${esc(e.dst)}` : esc(e.dst);
+  const meta = e.remote ? `${ROLE_SHORT[e.src_role] || e.src_role} → ${ROLE_SHORT[e.dst_role] || e.dst_role}` : "local logon";
+  const flag = e.severity === "high" ? `HIGH · forecast #${e.forecast_rank}`
+    : e.severity === "medium" ? (e.forecast_rank ? `MEDIUM · forecast #${e.forecast_rank}` : "MEDIUM · unexpected")
+    : e.remote ? "ok" : "";
+  const truth = C.reveal && e.attack ? `<span class="t-truth">ATTACK hop ${e.step}</span>` : "";
+  return `<div class="t-line ${flagged ? `t-${e.severity}` : e.remote ? "" : "t-dim"}">` +
+    `<span class="t-ts">${e.label}</span><span class="t-kind">${e.remote ? "AUTH" : "LOGON"}</span>` +
+    `<span class="t-user">${esc(e.user)}</span><span class="t-route">${route}</span>` +
+    `<span class="t-meta">${meta}${e.from_compromised ? ' <b class="t-comp">from compromised</b>' : ""}</span>` +
+    `<span class="t-flag">${flag}</span>${truth}</div>`;
+}
+
+/* The model line is stamped with the latest moment it has seen: the forecast hour or the last observed event. */
+function termSys(fc, events, upto) {
+  if (!C.net) return "";
+  const last = events.filter((e) => e.time <= upto).pop();
+  const hourLabel = fc.time.iso.replace("T", " ");
+  const at = last && last.label > hourLabel ? last.label : hourLabel;
+  const nm = (i) => C.net.nodes[i].name;
+  const top = fc.next_hops[0];
+  const a = fc.actions[0];
+  const act = a ? (a.kind === "isolate" ? `isolate ${nm(a.nodes[0])}` : `revoke ${nm(a.nodes[0])} → ${nm(a.nodes[1])}`) : "none";
+  return `<div class="t-line t-sys"><span class="t-ts">${at}</span><span class="t-kind">MODEL</span>` +
+    `<span class="t-text">stage ${fc.stage + 1}: attacker on <b>${nm(fc.current)}</b> · next hop <b>${nm(top.node)}</b> ${pct(top.prob)}` +
+    ` · path risk ${pct(fc.risk)} · response <b>${act}</b></span></div>`;
+}
+
+const termVisible = (events) => (C.term.filter === "flagged"
+  ? events.filter((e) => e.severity === "high" || e.severity === "medium") : events);
+
+function termScroll() {
+  const b = $("#term-body");
+  if (b) b.scrollTop = b.scrollHeight;
+}
+
+function termStatus(text, live) {
+  const el = $("#term-status");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle("live", !!live);
+}
+
+const CURSOR = '<div class="t-line t-cursor"><span class="cursor"></span></div>';
+
+/* Instant re-render up to what has already been streamed (filter change, reveal, going back). */
+async function termRedraw() {
+  const body = $("#term-body");
+  if (!body || C.term.gid == null || !C.fc) return;
+  const data = await api(`/api/events/${C.term.gid}`);
+  const lines = termVisible(data.events.filter((e) => e.time <= C.term.upto)).slice(-160).map(termLine);
+  body.innerHTML = `<div class="t-line t-dim"><span class="t-text">-- replaying ${netName(C.term.gid)} · ${data.events.length} events in window --</span></div>` +
+    lines.join("") + termSys(C.fc, data.events, C.term.upto) + CURSOR;
+  termScroll();
+}
+
+/* Stream the events that happened since the last stage shown. */
+async function feedTerm(token) {
+  const body = $("#term-body");
+  if (!body) return;
+  let data;
+  try {
+    if (C.term.gid !== C.gid) termStatus("loading events");
+    data = await api(`/api/events/${C.gid}`);
+  } catch (e) {
+    termStatus("offline");
+    return;
+  }
+  if (token !== C.token || !$("#term-body")) return;
+  const cutoff = stageCutoff(data, C.fc, C.stage);
+  const forward = C.term.gid === C.gid && cutoff >= C.term.upto && C.stage > C.term.stage;
+  if (!forward) {
+    C.term = { ...C.term, gid: C.gid, upto: cutoff, stage: C.stage };
+    await termRedraw();
+    termStatus("live", true);
+    return;
+  }
+  const add = termVisible(data.events.filter((e) => e.time > C.term.upto && e.time <= cutoff));
+  C.term.upto = cutoff;
+  C.term.stage = C.stage;
+  const cur = body.querySelector(".t-cursor");
+  if (cur) cur.outerHTML = "";
+  termStatus("streaming", true);
+  const shown = add.slice(-40);
+  if (add.length > shown.length) {
+    body.insertAdjacentHTML("beforeend", `<div class="t-line t-dim"><span class="t-text">… ${add.length - shown.length} earlier events</span></div>`);
+  }
+  const delay = shown.length > 20 ? 30 : 90;
+  for (const e of shown) {
+    if (token !== C.token || !$("#term-body")) return;
+    body.insertAdjacentHTML("beforeend", termLine(e));
+    termScroll();
+    await sleep(delay);
+  }
+  if (token !== C.token || !$("#term-body")) return;
+  body.insertAdjacentHTML("beforeend", termSys(C.fc, data.events, cutoff) + CURSOR);
+  while (body.children.length > 220) body.firstElementChild.outerHTML = "";
+  termScroll();
+  termStatus("live", true);
 }
 
 /* ------------------------------------------------------------ graph svg */

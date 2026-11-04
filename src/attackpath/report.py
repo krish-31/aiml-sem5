@@ -276,7 +276,7 @@ def build_report(net: dict, fc: dict, events: dict | None, evaluation: dict | No
                  "-" if e["forecast_rank"] is None else f"#{e['forecast_rank']}",
                  "-" if e["unexpected"] is None else f"{e['unexpected']:.2f}"]
                 for e in flagged[:12]]
-            t = _table(et, [26 * mm, 18 * mm, 46 * mm, 22 * mm, 32 * mm, 34 * mm], align_right=(4, 5))
+            t = _table(et, [36 * mm, 16 * mm, 40 * mm, 22 * mm, 30 * mm, 34 * mm], align_right=(4, 5))
             for i, e in enumerate(flagged[:12], start=1):
                 t.setStyle(TableStyle([("TEXTCOLOR", (3, i), (3, i), ATTACK if e["severity"] == "high" else PREDICT),
                                        ("FONT", (3, i), (3, i), "Plex-Bold", 8)]))

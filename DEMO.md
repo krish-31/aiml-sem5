@@ -36,7 +36,9 @@ calibration → top-k paths → defense → console.
    likely complete routes to the domain controller or database (purple diamonds)."*
 3. Point at **Recommended defense**: *"The simulator tried isolating machines and removing access, and
    picked the action that cuts the most risk while blocking the least normal traffic."*
-4. **Press the next arrow (or Play, or the → key).** The attacker moves (red trail), the forecast updates, and the risk usually rises
+4. **Press Play (or the next arrow, or the → key).** Watch the **live event feed** under the graph: logins stream in
+   with real timestamps, the attacker's hop appears flagged HIGH in red, and a MODEL line prints the updated forecast.
+    The attacker moves (red trail), the forecast updates, and the risk usually rises
    as they get closer.
 5. **Turn on "Reveal true path".** The dotted line is the truth. Rows marked ACTUAL and
    paths marked "matches real path" show where the model was right. The timeline at the bottom fills in too.

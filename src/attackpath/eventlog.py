@@ -27,6 +27,7 @@ import torch
 from attackpath.graph.builder import TemporalGraph
 from attackpath.inference import Forecast, prediction_hours
 from attackpath.models.tgnn import History, TemporalGNN
+from attackpath.replaytime import replay_base, stamp
 
 UNEXPECTED = 0.95  # unexpectedness above this is flagged medium even without a compromise
 TOP_FORECAST = 3  # a login to one of these forecast machines is flagged high
@@ -98,6 +99,7 @@ def build_event_log(
     # time of each attack hop (first event of each step), to know which machines are compromised when
     atk = events[events["is_attack"]]
     hop_times = sorted(atk.groupby("attack_step")["time"].min().tolist())
+    base = replay_base()
     rows = []
     for r in ev.itertuples(index=False):
         remote = r.src != r.dst
@@ -114,10 +116,11 @@ def build_event_log(
             row = f.P[u]
             prob = float(row[v])
             rank = int((row > row[v]).sum()) + 1
-        day, sec = divmod(int(r.time), 86_400)
+        when = stamp(int(r.time), base)
         rows.append({
             "time": int(r.time),
-            "label": f"D{day + 1} {sec // 3600:02d}:{(sec % 3600) // 60:02d}",
+            "ts": when.isoformat(),
+            "label": when.strftime("%Y-%m-%d %H:%M:%S"),
             "hour": int(r.hour),
             "user": r.user,
             "src": r.src,
