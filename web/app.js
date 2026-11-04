@@ -50,67 +50,7 @@ function showTip(html, x, y) {
 }
 const hideTip = () => { tip.hidden = true; };
 
-/* ================================================================ landing */
-function rng(seed) {
-  return () => {
-    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function heroGraph() {
-  const r = rng(7);
-  const ring = (n, rad, off = 0) => Array.from({ length: n }, (_, i) => {
-    const a = (2 * Math.PI * i) / n - Math.PI / 2 + off;
-    return [rad * Math.cos(a), rad * Math.sin(a)];
-  });
-  const crit = ring(2, 0.24, Math.PI / 4), srv = ring(8, 0.6, 0.35), ws = ring(30, 1.0);
-  const all = [...crit, ...srv, ...ws];
-  const C = (i) => i, S = (i) => 2 + i, W = (i) => 10 + i;
-  const edges = [];
-  for (let i = 0; i < 30; i++) {
-    edges.push([W(i), S(Math.floor(r() * 8))]);
-    if (r() < 0.5) edges.push([W(i), S(Math.floor(r() * 8))]);
-  }
-  for (let i = 0; i < 8; i++) if (r() < 0.6) edges.push([S(i), C(i % 2)]);
-  const line = (a, b) => `M${all[a][0].toFixed(3)},${all[a][1].toFixed(3)}L${all[b][0].toFixed(3)},${all[b][1].toFixed(3)}`;
-  const seen = [W(4), W(9), S(1)];         // attack so far
-  const pred = [S(1), S(3), C(0)];         // forecast continuation
-  const alt = [S(1), C(1)];
-  const node = (i, cls, rad) => `<circle cx="${all[i][0]}" cy="${all[i][1]}" r="${rad}" class="${cls}"/>`;
-  const dia = (i, rad) => {
-    const [x, y] = all[i];
-    return `<polygon points="${x},${y - rad} ${x + rad},${y} ${x},${y + rad} ${x - rad},${y}" class="n-critical"/>`;
-  };
-  return `
-  <svg viewBox="-1.2 -1.2 2.4 2.4" aria-hidden="true">
-    <defs>
-      <linearGradient id="sweep-g" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="var(--accent)" stop-opacity="0"/>
-        <stop offset="1" stop-color="var(--accent)" stop-opacity=".22"/>
-      </linearGradient>
-      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".012" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    </defs>
-    ${[0.24, 0.6, 1.0].map((rr) => `<circle r="${rr}" class="ring-guide"/>`).join("")}
-    <g class="sweep"><path d="M0,0 L1.15,0 A1.15,1.15 0 0,0 ${(1.15 * Math.cos(-0.7)).toFixed(3)},${(1.15 * Math.sin(-0.7)).toFixed(3)} Z" fill="url(#sweep-g)"/></g>
-    <path class="e-normal" d="${edges.map(([a, b]) => line(a, b)).join("")}"/>
-    <path class="e-pred" style="stroke-width:.008;opacity:.55" d="${line(alt[0], alt[1])}"/>
-    <path class="e-pred" d="${line(pred[0], pred[1])}${line(pred[1], pred[2])}"/>
-    <path class="e-attack" d="${line(seen[0], seen[1])}${line(seen[1], seen[2])}"/>
-    ${ws.map((_, i) => node(W(i), seen.includes(W(i)) ? "n-held" : "n-ws", 0.022)).join("")}
-    ${srv.map((_, i) => node(S(i), S(i) === seen[2] ? "n-held" : "n-server", 0.032)).join("")}
-    <circle cx="${all[S(3)][0]}" cy="${all[S(3)][1]}" r=".07" class="halo"/>
-    ${dia(C(0), 0.05)}${dia(C(1), 0.05)}
-    <circle cx="${all[S(1)][0]}" cy="${all[S(1)][1]}" r=".032" class="pulse"/>
-  </svg>
-  <div class="hero-hud">
-    <span class="hud-chip">foothold <b class="a">C-114</b></span>
-    <span class="hud-chip">next hop <b class="p">C-207</b> p=0.62</span>
-    <span class="hud-chip">response <b>isolate</b></span>
-  </div>`;
-}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function statTiles(ev) {
   const nh = ev.next_hop, td = ev.time_to_detection, d = ev.defense || {};
@@ -125,83 +65,255 @@ function statTiles(ev) {
     <div class="card stat ${c} fade-in d${i}"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
 }
 
-function pageLanding(view) {
-  const pipe = [
-    ["data", "Logs", "auth + network"], ["data", "Clean", "hourly windows"], ["data", "Graph", "users, machines"],
-    ["model", "Temporal GNN", "GAT + GRU"], ["model", "Calibrate", "temperature"], ["act", "Rank paths", "Yen's top-k"],
-    ["act", "Simulate", "defense utility"], ["act", "Console", "this app"],
-  ];
-  view.innerHTML = `
-  <div class="page">
-    <section class="hero">
-      <div class="fade-in">
-        <span class="eyebrow">Temporal graph learning · Adaptive defense</span>
-        <h1>See the attacker's <span class="hl">next move</span> before they make it.</h1>
-        <p class="lede">Attackers rarely reach the crown jewels in one step. They land on a workstation, steal credentials
-          and hop machine to machine. This system watches the network as a graph that changes every hour, forecasts
-          the next hop, ranks the routes to critical assets and recommends the response that cuts them off.</p>
-        <div class="cta">
-          <a class="btn primary" href="#/console">Open live console ${icon("arrow")}</a>
-          <a class="btn ghost" href="#/results">See the results</a>
-        </div>
-        <div class="hero-meta">
-          <span>${icon("graph")} Heterogeneous temporal graph</span>
-          <span>${icon("radar")} Calibrated probabilities</span>
-          <span>${icon("shield")} Defense simulation</span>
-        </div>
-      </div>
-      <div class="hero-visual fade-in d2">${heroGraph()}</div>
-    </section>
-
-    <section class="stats" id="stats">${'<div class="card stat"><div class="k">Loading results</div><div class="v faint">--</div></div>'.repeat(4)}</section>
-
-    <div class="section-head">
-      <div><span class="eyebrow">How it works</span><h2>Observe. Forecast. Defend.</h2></div>
-      <p>One pipeline joins next-hop forecasting, calibrated confidence, full attack-path ranking and a defense
-        simulator, which earlier work treats separately.</p>
-    </div>
-    <section class="steps">
-      <div class="card step observe"><div class="ico">${icon("graph")}</div><span class="num">01</span>
-        <h3>Observe</h3><p>Login and connection logs become one graph per hour: users and machines are nodes,
-        logins are edges, each carrying its own activity clues.</p></div>
-      <div class="card step predict"><div class="ico">${icon("radar")}</div><span class="num">02</span>
-        <h3>Forecast</h3><p>Graph attention reads each hour, a GRU remembers the past, and the model gives every
-        machine a calibrated probability of being the attacker's next hop.</p></div>
-      <div class="card step defend"><div class="ico">${icon("shield")}</div><span class="num">03</span>
-        <h3>Defend</h3><p>The most likely routes to the domain controller and databases are ranked, and a simulator
-        picks the isolation or access removal with the best risk cut for the least disruption.</p></div>
-    </section>
-
-    <div class="section-head">
-      <div><span class="eyebrow">Pipeline</span><h2>From raw logs to a recommended action</h2></div>
-      <p>Eight stages, each reading the previous stage's output, so every part can be tested on its own.</p>
-    </div>
-    <section class="card pipeline">
-      ${pipe.map(([c, b, s], i) => `<div class="pipe ${c}"><div class="dot">${i + 1}</div><b>${b}</b><span>${s}</span></div>`).join("")}
-    </section>
-
-    <section class="card cta-band">
-      <div><h3>Step through an attack, hop by hop.</h3>
-        <p>Replay a network the model has never seen and compare its forecast with what the attacker really did.</p></div>
-      <a class="btn primary" href="#/console">Launch console ${icon("arrow")}</a>
-    </section>
-
-    ${footer()}
-  </div>`;
-  api("/api/summary").then((s) => {
-    const el = $("#stats");
-    if (el && s.evaluation) el.innerHTML = statTiles(s.evaluation);
-  }).catch(() => {
-    const el = $("#stats");
-    if (el) el.innerHTML = `<div class="card note" style="grid-column:1/-1">Results are unavailable. Start the API with <b>python -m attackpath.api.server</b>.</div>`;
-  });
-}
-
 function footer() {
   return `<footer class="footer">
     <span><b style="color:var(--text)">Lateralis</b> · Temporal Graph Learning for Cyber Attack-Path Forecasting and Adaptive Defense · Krrish Agarwal · IS353IA · 2026–27</span>
     <a href="https://github.com/krish-31/aiml-sem5" target="_blank" rel="noopener">${icon("github")} krish-31/aiml-sem5</a>
   </footer>`;
+}
+
+/* ================================================================ landing */
+function sectionHead(n, label, title, text) {
+  return `<div class="section-head">
+    <div class="idx"><b>${n}</b> / ${label}</div>
+    <div><h2>${title}</h2>${text ? `<p>${text}</p>` : ""}</div>
+  </div>`;
+}
+
+/* small illustrations for the three moves */
+const ART = {
+  observe: `<svg viewBox="0 0 300 190" aria-hidden="true">
+    ${[0, 1, 2].map((i) => {
+      const y = 38 + i * 38, x = 50 + i * 26, o = 0.35 + i * 0.3;
+      const pts = [[x + 30, y + 20], [x + 80, y + 10], [x + 120, y + 32], [x + 62, y + 40], [x + 150, y + 18]];
+      return `<g style="opacity:${o}">
+        <polygon points="${x},${y + 44} ${x + 40},${y} ${x + 200},${y} ${x + 160},${y + 44}" style="fill:var(--surface-2);stroke:var(--border-strong)"/>
+        <path d="M${pts[0]}L${pts[1]}L${pts[2]}M${pts[1]}L${pts[3]}M${pts[2]}L${pts[4]}" style="stroke:var(--muted)" stroke-width="1"/>
+        ${pts.map(([a, b], j) => `<circle cx="${a}" cy="${b}" r="3.2" style="fill:${i === 2 && j === 3 ? "var(--attack)" : "var(--text)"}"/>`).join("")}
+        <text x="${x + 206}" y="${y + 26}" style="fill:var(--faint);font:11px var(--mono)">t${i === 2 ? "" : `-${2 - i}`}</text>
+      </g>`;
+    }).join("")}
+  </svg>`,
+  forecast: `<svg viewBox="0 0 300 190" aria-hidden="true">
+    <circle cx="62" cy="95" r="9" style="fill:var(--attack)"/>
+    <circle cx="62" cy="95" r="18" style="fill:none;stroke:var(--attack);opacity:.35"/>
+    ${[[0.55, 34], [0.21, 74], [0.13, 114], [0.04, 154]].map(([p, y], i) => `
+      <path d="M72,95 C120,95 140,${y} 196,${y}" style="fill:none;stroke:var(--predict);stroke-width:${1 + p * 7};opacity:${0.3 + p}" ${i ? 'stroke-dasharray="4 4"' : ""}/>
+      <circle cx="202" cy="${y}" r="5" style="fill:var(--server)"/>
+      <rect x="216" y="${y - 4}" width="${p * 110}" height="8" rx="2" style="fill:var(--predict);opacity:${0.4 + p}"/>
+      <text x="${222 + p * 110}" y="${y + 4}" style="fill:var(--muted);font:10.5px var(--mono)">${Math.round(p * 100)}%</text>`).join("")}
+  </svg>`,
+  defend: `<svg viewBox="0 0 300 190" aria-hidden="true">
+    <path d="M30,140 L95,96 L150,118" style="fill:none;stroke:var(--attack);stroke-width:3"/>
+    <path d="M150,118 L196,70 L262,52" style="fill:none;stroke:var(--predict);stroke-width:2.5;stroke-dasharray:6 5;opacity:.35"/>
+    <circle cx="30" cy="140" r="6" style="fill:var(--attack)"/><circle cx="95" cy="96" r="6" style="fill:var(--attack)"/>
+    <circle cx="150" cy="118" r="7" style="fill:var(--attack)"/>
+    <circle cx="150" cy="118" r="20" style="fill:none;stroke:var(--defend);stroke-width:2.5;stroke-dasharray:5 4"/>
+    <circle cx="196" cy="70" r="6" style="fill:var(--server);opacity:.5"/>
+    <rect x="254" y="44" width="16" height="16" transform="rotate(45 262 52)" style="fill:var(--critical)"/>
+    <path d="M168,92 l14,-14 M182,92 l-14,-14" style="stroke:var(--defend);stroke-width:2.5;stroke-linecap:round"/>
+    <text x="118" y="160" style="fill:var(--defend);font:11px var(--mono)">ISOLATE · risk -100%</text>
+  </svg>`,
+};
+
+const PRIOR = [
+  ["Bowman et al.", "RAID 2020", ["n", "n", "n", "n", "n"]],
+  ["Euler", "NDSS 2022", ["y", "h", "n", "n", "n"]],
+  ["DyMHAG", "IEEE Access 2025", ["y", "h", "n", "n", "n"]],
+  ["Physics-informed GNN", "JCP 2025", ["n", "n", "y", "n", "n"]],
+  ["SPGNN-API", "IEEE TIFS 2024", ["n", "n", "y", "n", "y"]],
+  ["CybORG", "arXiv 2021", ["n", "n", "n", "n", "h"]],
+];
+
+function versusTable() {
+  const mark = (v) => v === "y" ? `<span class="mark y">${icon("check")}</span>`
+    : v === "h" ? `<span class="mark h" title="partly">~</span>` : `<span class="mark n" title="no">&ndash;</span>`;
+  const cols = ["Learns event order", "Next-step forecast", "Full path ranking", "Calibrated confidence", "Defense action"];
+  return `<div class="card versus"><table class="vs">
+    <thead><tr><th>Approach</th>${cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+    <tbody>
+      ${PRIOR.map(([n, v, m]) => `<tr><td><b>${n}</b><small>${v}</small></td>${m.map((x) => `<td>${mark(x)}</td>`).join("")}</tr>`).join("")}
+      <tr class="us"><td><b>Lateralis</b><small>this project</small></td>${cols.map(() => `<td>${mark("y")}</td>`).join("")}</tr>
+    </tbody></table></div>`;
+}
+
+function pageLanding(view) {
+  view.innerHTML = `
+  <div class="page">
+    <div class="case-strip fade-in">
+      <span>Case file <b>IS353IA / 2026-27</b></span>
+      <span>Subject <b>lateral movement</b></span>
+      <span>Method <b>temporal graph learning</b></span>
+      <span class="live">Live replay</span>
+    </div>
+
+    <section class="hero">
+      <div class="fade-in">
+        <span class="eyebrow">Lateralis / attack-path forecasting</span>
+        <h1>Intruders move <em>sideways.</em><br/>We see where they're <em class="p">heading.</em></h1>
+        <p class="lede">Breaches rarely end where they begin. An attacker lands on one workstation, steals a password and
+          hops machine to machine toward the servers that matter. <b>Lateralis</b> reads the network as a graph that changes
+          every hour, forecasts the next hop, ranks the routes to critical assets and recommends the cut that stops them.</p>
+        <div class="cta">
+          <a class="btn primary" href="#/console">Open the console ${icon("arrow")}</a>
+          <a class="btn ghost" href="#/method">How it works</a>
+        </div>
+      </div>
+      <div class="card intercept fade-in d2" id="ix">
+        <div class="ix-head"><span id="ix-title">Intercept / connecting</span><span class="rec">Replay</span></div>
+        <div class="ix-graph"><div class="ix-stage" id="ix-stage">Loading model</div><div id="ix-svg" style="position:absolute;inset:0"></div><div class="scan"></div></div>
+        <div class="ix-log" id="ix-log"><div class="ix-line"><span class="t">--:--</span><span class="k k-sys">SYS</span><span class="v">waiting for model <span class="cursor"></span></span></div></div>
+      </div>
+    </section>
+
+    <div class="ticker" aria-hidden="true"><div class="ticker-track" id="ticker"></div></div>
+
+    ${sectionHead("01", "The problem", "Attackers stay hidden for <em>months.</em>",
+      "Most detection tools judge each login on its own and raise the alarm after the damage. By then the attacker has walked a path across the network that nobody was watching as a whole.")}
+    <section class="numerals">
+      <div class="numeral r"><div class="n">263<small>days</small></div><p>average time to find and contain a breach in India in 2025.</p><span class="src">IBM Cost of a Data Breach, 2025</span></div>
+      <div class="numeral"><div class="n">₹22<small>crore</small></div><p>average cost of a single breach in India, 13% higher than the year before.</p><span class="src">IBM Cost of a Data Breach, 2025</span></div>
+      <div class="numeral"><div class="n">0.16<small>%</small></div><p>of login events in our data belong to the attack. The rest is normal work hiding it.</p><span class="src">Lateralis synthetic networks</span></div>
+    </section>
+
+    ${sectionHead("02", "The method", "Observe. Forecast. <em>Defend.</em>",
+      "Three moves, one pipeline. Each stage reads the previous one's output, from raw logs to a recommended action.")}
+    <section class="moves">
+      <article class="card move"><div class="move-art">${ART.observe}</div><div class="move-body">
+        <span class="roman">i.</span><h3>Observe</h3>
+        <p>Login and connection logs become one graph per hour. Users and machines are nodes, logins are edges,
+          each carrying clues such as new connections and time of day.</p>
+        <div class="tech">heterogeneous snapshots / 1 h windows</div></div></article>
+      <article class="card move"><div class="move-art">${ART.forecast}</div><div class="move-body">
+        <span class="roman">ii.</span><h3>Forecast</h3>
+        <p>Graph attention reads each hour and a GRU remembers the past. Every machine gets a calibrated probability
+          of being the attacker's next hop.</p>
+        <div class="tech">2 x GAT + GRU / temperature scaling</div></div></article>
+      <article class="card move"><div class="move-art">${ART.defend}</div><div class="move-body">
+        <span class="roman">iii.</span><h3>Defend</h3>
+        <p>The likeliest routes to the domain controller and databases are ranked, and a simulator picks the isolation
+          or access removal that cuts the most risk for the least disruption.</p>
+        <div class="tech">Yen's k-shortest paths / utility search</div></div></article>
+    </section>
+
+    ${sectionHead("03", "The gap", "Others answer <em>one</em> question. This answers four.",
+      "Prior work detects odd logins, predicts threats or finds static paths. None of it forecasts the next step, ranks full paths, calibrates its confidence and recommends a response in one system.")}
+    ${versusTable()}
+
+    ${sectionHead("04", "The evidence", "Tested on networks it has <em>never seen.</em>",
+      "45 held-out company networks, compared with a hand-written rule and random guessing under the same conditions.")}
+    <section class="proof" id="proof">${'<div><div class="k">Loading</div><div class="n faint">--</div></div>'.repeat(4)}</section>
+    <div class="proof-foot"><span>Synthetic data for now. LANL, CICIDS2017 and UNSW-NB15 are next.</span>
+      <a class="btn ghost" href="#/results">Full results ${icon("arrow")}</a></div>
+
+    <section class="cta-band">
+      <div><h3>Watch an attack <em>unfold,</em><br/>one hop at a time.</h3>
+        <p>Replay a network the model has never seen and compare its forecast with what the attacker really did.</p></div>
+      <a class="btn" href="#/console">Launch console ${icon("arrow")}</a>
+    </section>
+
+    ${footer()}
+  </div>`;
+
+  api("/api/summary").then((s) => {
+    const ev = s.evaluation;
+    if (!ev) return;
+    const nh = ev.next_hop, td = ev.time_to_detection, d = ev.defense || {};
+    const items = [
+      ["Next hop in top 5", pct(nh.tgnn.top5)], ["Caught before target", pct(td.tgnn.detected_before_target)],
+      ["Link AUC", ev.link.calibrated.auc.toFixed(3)], ["Calibration error", nh.tgnn.ece.toFixed(3)],
+      ["Risk cut", pct(d.mean_risk_drop || 0)], ["Normal traffic blocked", pct(d.mean_normal_blocked || 0, 1)],
+      ["Held-out networks", ev.n_test_networks], ["Parameters", (s.params || 0).toLocaleString()],
+    ];
+    const t = $("#ticker");
+    if (t) t.innerHTML = [...items, ...items].map(([k, v]) => `<span>${k}<b>${v}</b></span>`).join("");
+    const p = $("#proof");
+    if (p) p.innerHTML = [
+      ["Next hop in top 5", pct(nh.tgnn.top5), `rule-based <b>${pct(nh.heuristic.top5)}</b> · random <b>${pct(nh.random.top5)}</b>`],
+      ["Caught before target", pct(td.tgnn.detected_before_target), `rule-based <b>${pct(td.heuristic.detected_before_target)}</b>`],
+      ["Calibration error", nh.tgnn.ece.toFixed(3), `rule-based <b>${nh.heuristic.ece.toFixed(3)}</b> · lower is better`],
+      ["Risk cut by response", pct(d.mean_risk_drop || 0), `while blocking <b>${pct(d.mean_normal_blocked || 0, 1)}</b> of normal traffic`],
+    ].map(([k, n, sub]) => `<div><div class="k">${k}</div><div class="n">${n}</div><div class="s">${sub}</div></div>`).join("");
+  }).catch(() => {});
+
+  startIntercept();
+  cleanup = () => { IX.run += 1; };
+}
+
+/* ------------------------------------------------- live intercept replay */
+const IX = { run: 0 };
+
+async function startIntercept() {
+  const run = ++IX.run;
+  const alive = () => run === IX.run && $("#ix-log");
+  const log = (t, k, cls, v) => {
+    const el = $("#ix-log");
+    if (!el) return;
+    const line = document.createElement("div");
+    line.className = "ix-line";
+    line.innerHTML = `<span class="t">${t}</span><span class="k ${cls}">${k}</span><span class="v">${v}</span>`;
+    el.appendChild(line);
+    while (el.children.length > 9) el.firstChild.remove();
+  };
+  let net, fcs;
+  try {
+    const { default: gid } = await api("/api/networks");
+    net = await api(`/api/network/${gid}`);
+    fcs = await Promise.all(Array.from({ length: net.hops }, (_, s) => api(`/api/forecast/${gid}/${s}`)));
+  } catch (e) {
+    if (alive()) {
+      $("#ix-log").innerHTML = "";
+      log("--:--", "SYS", "k-sys", "model offline. start <b>python -m attackpath.api.server</b>");
+      $("#ix-stage").textContent = "Offline";
+    }
+    return;
+  }
+  if (!alive()) return;
+  const nm = (i) => net.nodes[i].name;
+  const lbl = (i) => net.nodes[i].label.toLowerCase();
+  const rankOf = (fc, v) => 1 + fc.p_next.filter((p) => p > fc.p_next[v]).length;
+  const truth = fcs[0].truth.remaining;
+  const K = net.hops;
+  $("#ix-title").textContent = `Intercept / ${netName(net.id)} / ${net.nodes.length} hosts / unseen in training`;
+  const firstHit = fcs.findIndex((f) => f.paths.some((p) => sameList(p.nodes, f.truth.remaining)));
+
+  while (alive()) {
+    $("#ix-log").innerHTML = "";
+    log("--:--", "SYS", "k-sys", `replaying held-out attack on <b>${netName(net.id)}</b>`);
+    for (let s = 0; s < K && alive(); s++) {
+      const fc = fcs[s];
+      const t = `D${fc.time.day} ${String(fc.time.hour).padStart(2, "0")}:00`;
+      $("#ix-svg").innerHTML = graphSVG(net, fc, 2, false);
+      $("#ix-stage").textContent = `Stage ${s + 1}/${K} · ${fc.time.label}`;
+      await sleep(500);
+      if (!alive()) return;
+      if (s === 0) log(t, "ALERT", "k-alert", `initial access on <b>${nm(fc.current)}</b> · ${lbl(fc.current)}`);
+      else {
+        const r = rankOf(fcs[s - 1], fc.current);
+        log(t, "HOP", r <= 3 ? "k-ok" : "k-obs", `<b>${nm(fc.footholds[s - 1])} → ${nm(fc.current)}</b> · forecast rank #${r}`);
+      }
+      await sleep(750); if (!alive()) return;
+      log("", "FCAST", "k-fcast", fc.next_hops.slice(0, 3).map((h) => `<b>${nm(h.node)}</b> ${pct(h.prob)}`).join(" · "));
+      await sleep(750); if (!alive()) return;
+      if (fc.paths[0]) log("", "PATH", "k-path", `${fc.paths[0].nodes.map(nm).join(" → ")} · p=${fc.paths[0].prob.toFixed(3)}`);
+      await sleep(750); if (!alive()) return;
+      const a = fc.actions[0];
+      if (a) log("", "ACTION", "k-act", `${a.kind === "isolate" ? `isolate <b>${nm(a.nodes[0])}</b>` : `revoke <b>${nm(a.nodes[0])} → ${nm(a.nodes[1])}</b>`} · risk -${pct(a.risk_drop)} · cost ${pct(a.blocked, 1)}`);
+      await sleep(2000);
+    }
+    if (!alive()) return;
+    const last = fcs[K - 1];
+    const target = truth[truth.length - 1];
+    const r = rankOf(last, target);
+    log("", "HOP", r <= 3 ? "k-ok" : "k-obs", `<b>${nm(last.current)} → ${nm(target)}</b> · forecast rank #${r}`);
+    await sleep(700); if (!alive()) return;
+    log("", "TARGET", "k-alert", `<b>${nm(target)}</b> reached · ${lbl(target)}`);
+    await sleep(700); if (!alive()) return;
+    log("", "VERDICT", "k-ok", firstHit >= 0
+      ? `true path was in the top-5 forecast ${K - firstHit} hop${K - firstHit > 1 ? "s" : ""} before the target`
+      : "true path never entered the top-5 forecast");
+    await sleep(5200);
+  }
 }
 
 /* ================================================================ console */
@@ -380,14 +492,14 @@ function draw() {
 /* ------------------------------------------------------------ graph svg */
 const radius = (n) => (n.group === "critical" ? 0.045 : n.group === "server" ? 0.031 : 0.02);
 
-function graphSVG(net, fc) {
+function graphSVG(net, fc, k = C.k, reveal = C.reveal) {
   const nodes = net.nodes;
   const held = new Set(fc.footholds);
   const P = fc.p_next;
   const top = new Set(fc.next_hops.slice(0, 3).map((h) => h.node));
-  const shown = fc.paths.slice(0, C.k);
+  const shown = fc.paths.slice(0, k);
   const onPath = new Set(shown.flatMap((p) => p.nodes));
-  const truth = C.reveal ? fc.truth.remaining : [];
+  const truth = reveal ? fc.truth.remaining : [];
   const xy = (i) => [nodes[i].x, nodes[i].y];
   const seg = (a, b, extra = 0.012) => {
     const [x1, y1] = xy(a), [x2, y2] = xy(b);
