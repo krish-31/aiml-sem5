@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
 import EVAL from "../../../results/eval_synthetic.json"
 import { SNAP, offlineForecast, offlineNetwork } from "@/lib/offline"
 import { Closing, I, PRIMARY } from "@/components/Chrome"
@@ -11,7 +10,6 @@ import {
   type Forecast, type Network, type NetworkListItem,
 } from "@/lib/api"
 
-gsap.registerPlugin(ScrollTrigger)
 
 const ev = EVAL
 const h = (n: number) => ({ ["--h" as string]: n })
@@ -69,8 +67,8 @@ type Line = { id: number; t: string; k: string; tone: string; v: React.ReactNode
 
 function Hero() {
   return (
-    <section className="screen ground-lit" style={{ ...h(1), paddingTop: "calc(var(--nav) + var(--hgap))", paddingBottom: "calc(var(--hpadb) + var(--bar))" }}>
-      <div className="wrap grid12 h-full max-lg:flex max-lg:flex-col max-lg:gap-8">
+    <section className="screen ground-lit max-lg:!h-[100svh] max-lg:!min-h-0" style={{ ...h(1), paddingTop: "calc(var(--nav) + var(--hgap))", paddingBottom: "calc(var(--hpadb) + var(--bar))" }}>
+      <div className="wrap grid12 h-full max-lg:flex max-lg:flex-col max-lg:gap-8 max-sm:gap-6">
         <div className="col-span-5 flex flex-col">
           <p className="mb-4 flex items-center gap-2 text-[14px] text-dim">
             <span className="live-dot" /> Tested on {ev.n_test_networks} networks the model never saw
@@ -84,7 +82,7 @@ function Hero() {
             <Link to="/results" className="btn">See the results</Link>
           </div>
         </div>
-        <div className="col-span-6 col-start-7 min-h-[300px] max-lg:flex-1">
+        <div className="col-span-6 col-start-7 min-h-[300px] max-lg:min-h-[240px] max-lg:flex-1">
           <Intercept />
         </div>
       </div>
@@ -192,7 +190,7 @@ function Intercept() {
   return (
     <div className="card relative flex h-full flex-col overflow-hidden ground-dots" style={{ backgroundColor: "var(--p-surface)" }}>
       <div className="flex items-center justify-between border-b border-line px-4 py-3 text-[13px]">
-        <span className="mono text-dim">{d ? `${netName(d.net.id)} · ${d.net.nodes.length} hosts · unseen in training` : "connecting to the model"}</span>
+        <span className="mono truncate text-dim">{d ? <>{netName(d.net.id)} · {d.net.nodes.length} hosts<span className="max-sm:hidden"> · unseen in training</span></> : "connecting to the model"}</span>
         <span className="mono flex items-center gap-2 text-dim">
           {d?.offline && <span className="rounded-[3px] border border-line px-1.5 text-[11.5px]">recorded</span>}
           {d ? `stage ${stage + 1}/${d.net.hops}` : "--"}
@@ -224,7 +222,7 @@ function Intercept() {
           </div>
         )}
       </div>
-      <div ref={logRef} className="mono h-[168px] overflow-hidden border-t border-line bg-background/60 px-4 py-3 text-[12.5px] leading-[1.75] max-sm:h-[120px]" aria-live="off">
+      <div ref={logRef} className="mono h-[168px] overflow-hidden border-t border-line bg-background/60 px-4 py-3 text-[12.5px] leading-[1.75] max-sm:h-[92px] max-sm:text-[11.5px]" aria-live="off">
         {lines.map((l) => (
           <div key={l.id} className="flex gap-3 whitespace-nowrap">
             <span className="w-10 shrink-0 text-faint">{l.t}</span>
@@ -334,7 +332,7 @@ function Steps() {
   const c = ev.containment
   const hours = Array.from({ length: 24 }, (_, i) => i)
   return (
-    <section className="screen ground-surface" id="steps" style={h(1)}>
+    <section className="screen ground-surface" id="steps" style={{ ...h(1), ["--hm" as string]: 2 }}>
       <div className="wrap flex h-full flex-col">
         <div className="section-head">
           <h2>Four steps in one pipeline</h2>
@@ -404,12 +402,12 @@ function Steps() {
 
 function StepCard({ n, title, body, children }: { n: string; title: string; body: string; children: React.ReactNode }) {
   return (
-    <div className="card flex min-h-[380px] flex-col overflow-hidden" style={{ backgroundColor: "var(--p-bg)" }}>
-      <div className="min-h-[200px] flex-1 border-b border-line bg-surface p-5">{children}</div>
-      <div className="p-5">
+    <div className="card flex min-h-[380px] flex-col overflow-hidden max-sm:min-h-0" style={{ backgroundColor: "var(--p-bg)" }}>
+      <div className="min-h-[200px] flex-1 border-b border-line bg-surface p-5 max-sm:h-[150px] max-sm:min-h-0 max-sm:flex-none max-sm:p-4">{children}</div>
+      <div className="p-5 max-sm:p-4">
         <span className="mono text-[13px] text-cyan">{n}</span>
-        <h4 className="mt-2 min-h-[52px]">{title}</h4>
-        <p className="mt-2 min-h-[70px] text-[15px] leading-[1.55] text-dim">{body}</p>
+        <h4 className="mt-2 min-h-[52px] max-sm:min-h-0">{title}</h4>
+        <p className="mt-2 min-h-[70px] text-[15px] leading-[1.55] text-dim max-sm:min-h-0">{body}</p>
       </div>
     </div>
   )
@@ -424,20 +422,19 @@ const STAGES = [
   ["Paths and response", "Yen's top-k routes and a simulator that scores every cut."],
 ] as const
 
+const OFFLINE_NET = offlineNetwork()
+const STAGE_VIEW = [
+  "one hour of logins as a graph",
+  "attention over each machine's neighbours",
+  "state carried across hours",
+  "next hop scored on every machine",
+  "the recorded route to the domain controller",
+]
+
 function Pipeline() {
   const sec = useRef<HTMLElement>(null)
+  // a click on a stage lights it and swaps the map (a 450 ms swap the visitor makes)
   const [lit, setLit] = useState(STAGES.length - 1)
-
-  useLayoutEffect(() => {
-    const el = sec.current
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches || window.innerWidth < 1024) return
-    setLit(0)
-    const st = ScrollTrigger.create({
-      trigger: el, start: "top top", end: "bottom bottom",
-      onUpdate: (self) => setLit(Math.min(STAGES.length - 1, Math.floor(self.progress * STAGES.length))),
-    })
-    return () => st.kill()
-  }, [])
 
   useLayoutEffect(() => {
     const el = sec.current
@@ -447,8 +444,8 @@ function Pipeline() {
   }, [lit])
 
   return (
-    <section ref={sec} className="screen" id="pipeline" data-moment="pipeline" style={{ ...h(2), ["--hm" as string]: 1, paddingTop: 0, paddingBottom: 0 }}>
-      <div className="sticky top-0 flex h-[100svh] flex-col max-lg:static max-lg:h-auto" style={{ paddingTop: "var(--padt)", paddingBottom: "var(--padb)" }}>
+    <section ref={sec} className="screen" id="pipeline" style={{ ...h(1), ["--hm" as string]: 2 }}>
+      <div>
         <div className="wrap">
           <div className="section-head">
             <h2>How the model reads a network</h2>
@@ -459,12 +456,13 @@ function Pipeline() {
               const on = i <= lit
               return (
                 <li key={t} className="relative">
-                  <div className="card h-full p-5 transition-colors duration-300"
+                  <button type="button" onClick={() => setLit(i)} aria-pressed={i === lit}
+                    className="card h-full w-full cursor-pointer p-5 text-left transition-colors duration-300 hover:border-[var(--p-line-strong)] max-sm:p-4"
                     style={{ borderColor: i === lit ? "var(--p-accent)" : undefined, backgroundColor: on ? "var(--p-surface)" : "transparent" }}>
                     <span className={`mono text-[13px] ${on ? "text-cyan" : "text-faint"}`}>{String(i + 1).padStart(2, "0")}</span>
-                    <h4 className="mt-3">{t}</h4>
+                    <h4 className="mt-3 max-sm:mt-1">{t}</h4>
                     <p className="mt-2 text-[15px] leading-[1.55] text-dim">{body}</p>
-                  </div>
+                  </button>
                   {i < STAGES.length - 1 && (
                     <span className="absolute top-1/2 -right-3 hidden h-px w-3 bg-line md:block">
                       {i < lit && <span data-flow={i + 1} className="block h-full w-full bg-cyan" />}
@@ -474,18 +472,24 @@ function Pipeline() {
               )
             })}
           </ol>
-          <div className="mt-12 grid grid-cols-2 gap-6 border-t border-line pt-8 md:grid-cols-4">
-            {[
-              ["300", "synthetic networks, 7 days of logins each"],
-              ["210 / 45 / 45", "train, validation and test split by network"],
-              ["0.16%", "of events belong to an attack"],
-              [ev.link.calibrated.auc.toFixed(3), "AUC for next-hour links"],
-            ].map(([v, k]) => (
-              <div key={k}>
-                <div className="mono text-[28px] tracking-[-0.02em] text-ink">{v}</div>
-                <div className="mt-1 text-[14px] text-dim">{k}</div>
-              </div>
-            ))}
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="card relative h-[300px] overflow-hidden ground-dots lg:col-span-8 max-lg:h-[440px] max-sm:h-[240px]" style={{ backgroundColor: "var(--p-surface)" }}>
+              <div className="mono absolute top-3 left-4 z-10 text-[12.5px] text-dim">{netName(SNAP.id)} · {STAGE_VIEW[lit]}</div>
+              <NetMap net={OFFLINE_NET} fc={offlineForecast(Math.min(lit, OFFLINE_NET.hops - 1))} reveal={lit >= 4} labels={false} className="absolute inset-0 top-6" />
+            </div>
+            <div className="grid grid-cols-2 gap-6 lg:col-span-4">
+              {[
+                ["300", "synthetic networks, 7 days of logins each"],
+                ["210 / 45 / 45", "train, validation and test networks"],
+                ["0.16%", "of events belong to an attack"],
+                [ev.link.calibrated.auc.toFixed(3), "AUC for next-hour links"],
+              ].map(([v, k]) => (
+                <div key={k} className="border-t border-line pt-4">
+                  <div className="mono text-[26px] tracking-[-0.02em] text-ink max-sm:text-[20px]">{v}</div>
+                  <div className="mt-1 text-[14px] text-dim">{k}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -514,14 +518,14 @@ function Results() {
             <span key={t} className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-[2px]" style={{ background: c }} />{t}</span>
           ))}
         </div>
-        <div className="space-y-7">
+        <div className="space-y-7 max-lg:space-y-12 max-sm:space-y-5">
           {rows.map(([label, a, b, c]) => (
             <div key={label} className="grid grid-cols-12 items-center gap-6 max-md:gap-2">
               <div className="col-span-12 text-[15px] md:col-span-3">{label}</div>
               <div className="col-span-12 space-y-1.5 md:col-span-9">
                 {([[a, "var(--p-accent)"], [b, "var(--p-muted)"], [c, "var(--p-surface-3)"]] as const).map(([v, col], i) => v == null ? null : (
                   <div key={i} className="flex items-center gap-3">
-                    <div className="h-3 flex-1 overflow-hidden rounded-[2px]"><div className="h-full rounded-[2px]" style={{ width: pct(v), background: col }} /></div>
+                    <div className="h-3 flex-1 overflow-hidden rounded-[2px] max-lg:h-5 max-sm:h-2.5"><div className="h-full rounded-[2px]" style={{ width: pct(v), background: col }} /></div>
                     <span className={`mono w-12 text-right text-[13px] ${i === 0 ? "text-ink" : "text-dim"}`}>{pct(v)}</span>
                   </div>
                 ))}
@@ -551,7 +555,7 @@ function Mark({ v }: { v: string }) {
 }
 function PriorWork() {
   return (
-    <section className="screen" id="prior-work" style={h(1)}>
+    <section className="screen" id="prior-work" style={{ ...h(1), ["--hm" as string]: 2 }}>
       <div className="wrap">
         <div className="section-head">
           <h2>Prior work covers one or two steps</h2>
@@ -575,9 +579,9 @@ function PriorWork() {
 
 /* ============================================================ questions */
 const FAQ: [string, string][] = [
-  ["What data is the model trained on?", "300 synthetic company networks with seven days of normal logins and one 3 to 6 hop attack each. The attacker steals credentials and prefers admin machines. LANL, CICIDS2017 and UNSW-NB15 come next."],
-  ["How is a forecast checked?", "Every number comes from networks held out of training. A prediction for hour t+1 only uses logs up to hour t, so the model never sees the future."],
-  ["Why is full-path accuracy lower than next-hop accuracy?", "A full path needs three to six correct guesses in a row. Catching the attacker before the target is the measure that matters to an analyst."],
+  ["What data is the model trained on?", "300 synthetic company networks, each with seven days of normal logins and one attack of 3 to 6 hops. LANL, CICIDS2017 and UNSW-NB15 come next."],
+  ["How is a forecast checked?", "Every number comes from networks held out of training. A forecast for hour t+1 uses only logs up to hour t."],
+  ["Why is full-path accuracy lower than next-hop accuracy?", "A full path needs three to six correct guesses in a row, so catching the attacker before the target is the better measure."],
   ["What does calibrated mean here?", "Temperature scaling makes a 30% forecast come true about 30% of the time, so analysts can weigh the numbers directly."],
 ]
 function Questions() {
@@ -587,9 +591,9 @@ function Questions() {
         <h2 className="col-span-5">Questions about the model</h2>
         <dl className="col-span-6 col-start-7 m-0">
           {FAQ.map(([q, a]) => (
-            <div key={q} className="border-b border-line py-6 first:pt-0">
-              <dt className="text-[18px] font-medium tracking-[-0.01em]">{q}</dt>
-              <dd className="m-0 mt-2 text-[16px] leading-[1.65] text-dim">{a}</dd>
+            <div key={q} className="border-b border-line py-6 first:pt-0 max-sm:py-4">
+              <dt className="text-[18px] font-medium tracking-[-0.01em] max-sm:text-[16px]">{q}</dt>
+              <dd className="m-0 mt-2 text-[16px] leading-[1.65] text-dim max-sm:mt-1 max-sm:leading-[1.5]">{a}</dd>
             </div>
           ))}
         </dl>

@@ -261,7 +261,10 @@ footer.closing {
   overflow: clip;
 }
 @media (max-width: 1023px) {
-  main > section.screen, footer.closing { height: auto; min-height: calc(var(--hm, var(--h, 1)) * 100lvh); }
+  main > section.screen, footer.closing { height: auto; min-height: calc(var(--h, 1) * 100lvh); }
+}
+@media (max-width: 639px) {
+  main > section.screen, footer.closing { min-height: calc(var(--hm, var(--h, 1)) * 100lvh); }
 }
 .ground-surface { background-color: var(--p-surface); }
 .ground-lit { background-image: var(--lit); }
