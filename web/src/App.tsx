@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
-import { Nav } from "@/components/Chrome"
+import { AppShell, TopBar } from "@/components/Chrome"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import Console from "@/pages/Console"
 import Landing from "@/pages/Landing"
@@ -10,12 +10,12 @@ import { Events, Method, Reports, Results } from "@/pages/Pages"
    and need no server-side fallback from FastAPI's static mount. */
 
 const TITLES: Record<string, string> = {
-  "/": "Lateralis · Attack-path forecasting for security teams",
-  "/console": "Console · Lateralis",
-  "/events": "Event log · Lateralis",
-  "/reports": "Reports · Lateralis",
-  "/results": "Results · Lateralis",
-  "/method": "Method · Lateralis",
+  "/": "LATERALIS · attack-path forecasting",
+  "/console": "console · LATERALIS",
+  "/events": "events · LATERALIS",
+  "/reports": "reports · LATERALIS",
+  "/results": "results · LATERALIS",
+  "/method": "method · LATERALIS",
 }
 
 function Frame() {
@@ -23,13 +23,12 @@ function Frame() {
   useEffect(() => {
     window.scrollTo(0, 0)
     document.title = TITLES[pathname] ?? TITLES["/"]
-    document.documentElement.dataset.page = pathname === "/" ? "landing" : "app"
   }, [pathname])
+
+  if (pathname === "/") return <><TopBar /><Landing /></>
   return (
-    <>
-      <Nav />
+    <AppShell>
       <Routes>
-        <Route path="/" element={<Landing />} />
         <Route path="/console" element={<Console />} />
         <Route path="/events" element={<Events />} />
         <Route path="/reports" element={<Reports />} />
@@ -37,7 +36,7 @@ function Frame() {
         <Route path="/method" element={<Method />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </AppShell>
   )
 }
 

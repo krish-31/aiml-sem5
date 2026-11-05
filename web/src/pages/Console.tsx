@@ -438,23 +438,23 @@ function Feed({ net, fc, gid, stage, reveal }: { net: Network; fc: Forecast; gid
   const act = a ? (a.kind === "isolate" ? `isolate ${nm(a.nodes[0])}` : `revoke ${nm(a.nodes[0])} → ${nm(a.nodes[1])}`) : "none"
 
   return (
-    <div className={`flex flex-col border-t border-line bg-[#05080e] text-[#cbd5e1] ${min ? "" : "h-[340px] max-xl:h-[380px]"}`}>
+    <div className={`flex flex-col border-t border-line bg-black text-[var(--p-ink)] ${min ? "" : "h-[340px] max-xl:h-[380px]"}`}>
       <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5 text-[12.5px]">
-        <span className="flex items-center gap-2 font-medium text-[#e6ebf2]">
+        <span className="flex items-center gap-2 font-medium text-[var(--p-bright)]">
           <span className={`live-dot ${status === "offline" ? "off" : ""}`} />Live event feed
-          <Link to="/events" className="ml-1 font-normal text-[#93a1b5] underline-offset-2 hover:text-[#e6ebf2] hover:underline">full log</Link>
+          <Link to="/events" className="ml-1 font-normal text-[var(--p-muted)] underline-offset-2 hover:text-[var(--p-bright)] hover:underline">full log</Link>
         </span>
         <span className="flex items-center gap-2">
           <span className="inline-flex rounded-md border border-white/10 p-0.5">
             {(["all", "flagged"] as const).map((f) => (
               <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}
-                className={`h-6 rounded-[3px] px-2 text-[12px] ${filter === f ? "bg-[#e6ebf2] text-[#070b12]" : "text-[#93a1b5] hover:text-[#e6ebf2]"}`}>{f === "all" ? "All" : "Flagged"}</button>
+                className={`h-6 rounded-[3px] px-2 text-[12px] ${filter === f ? "bg-[var(--p-bright)] text-[#000]" : "text-[var(--p-muted)] hover:text-[var(--p-bright)]"}`}>{f === "all" ? "All" : "Flagged"}</button>
             ))}
           </span>
-          <span className={`mono text-[11.5px] ${status === "live" || status === "streaming" ? "text-[#34c38f]" : "text-[#93a1b5]"}`}>{status}</span>
-          {min && unread > 0 && <span className="mono rounded bg-[#f0a93b] px-1.5 text-[11px] text-[#070b12]">{unread} new</span>}
+          <span className={`mono text-[11.5px] ${status === "live" || status === "streaming" ? "text-[var(--p-accent)]" : "text-[var(--p-muted)]"}`}>{status}</span>
+          {min && unread > 0 && <span className="mono rounded bg-[var(--predict)] px-1.5 text-[11px] text-[#000]">{unread} new</span>}
           <button type="button" onClick={() => setMin((m) => !m)} aria-expanded={!min} title={min ? "Expand the event feed" : "Minimize the event feed"}
-            className="grid h-6 w-6 place-items-center rounded text-[#93a1b5] hover:bg-white/10 hover:text-[#e6ebf2]">
+            className="grid h-6 w-6 place-items-center rounded text-[var(--p-muted)] hover:bg-white/10 hover:text-[var(--p-bright)]">
             <I.prev width={14} height={14} style={{ transform: min ? "rotate(90deg)" : "rotate(-90deg)" }} />
           </button>
         </span>
@@ -462,12 +462,12 @@ function Feed({ net, fc, gid, stage, reveal }: { net: Network; fc: Forecast; gid
       {!min && (
         <div ref={body} className="mono min-h-0 flex-1 overflow-y-auto px-4 py-2 text-[11.5px] leading-[1.7]" aria-live="polite">
           {rows.map((r) => {
-            if (r.note) return <div key={r.key} className="text-[#5d6b80]">-- {r.note} --</div>
+            if (r.note) return <div key={r.key} className="text-[var(--p-faint)]">-- {r.note} --</div>
             if (r.sys) return (
-              <div key={r.key} className="mt-1 border-l-2 border-[#22d3ee] bg-[#22d3ee]/[.06] py-1 pl-2">
-                <span className="text-[#5d6b80]">{fc.as_of.iso.replace("T", " ").slice(5, 19)} </span>
-                <span className="font-medium text-[#22d3ee]">MODEL </span>
-                stage {fc.stage + 1}: attacker on <b className="text-[#e6ebf2]">{nm(fc.current)}</b> · next hop <b className="text-[#f0a93b]">{top ? nm(top.node) : "-"}</b> {top ? pct(top.prob) : ""} · path risk {pct(fc.risk)} · {fc.containment ? `contain ${nm(fc.containment.nodes[0])} · ` : ""}next cut <b className="text-[#34c38f]">{act}</b>
+              <div key={r.key} className="mt-1 border-l-2 border-[var(--p-accent)] bg-[var(--p-accent)]/[.06] py-1 pl-2">
+                <span className="text-[var(--p-faint)]">{fc.as_of.iso.replace("T", " ").slice(5, 19)} </span>
+                <span className="font-medium text-[var(--p-accent)]">MODEL </span>
+                stage {fc.stage + 1}: attacker on <b className="text-[var(--p-bright)]">{nm(fc.current)}</b> · next hop <b className="text-[var(--predict)]">{top ? nm(top.node) : "-"}</b> {top ? pct(top.prob) : ""} · path risk {pct(fc.risk)} · {fc.containment ? `contain ${nm(fc.containment.nodes[0])} · ` : ""}next cut <b className="text-[var(--p-accent)]">{act}</b>
                 <span className="caret ml-1" />
               </div>
             )
@@ -482,16 +482,16 @@ function Feed({ net, fc, gid, stage, reveal }: { net: Network; fc: Forecast; gid
 function FeedLine({ e, reveal }: { e: LogEvent; reveal: boolean }) {
   const flagged = e.severity === "high" || e.severity === "medium"
   const flag = e.severity === "high" ? `HIGH #${e.forecast_rank}` : e.severity === "medium" ? (e.forecast_rank ? `MED #${e.forecast_rank}` : "MED unexp.") : e.remote ? "ok" : ""
-  const tone = e.severity === "high" ? "text-[#f2555a]" : e.severity === "medium" ? "text-[#f0a93b]" : e.remote ? "text-[#cbd5e1]" : "text-[#5d6b80]"
+  const tone = e.severity === "high" ? "text-[var(--attack)]" : e.severity === "medium" ? "text-[var(--predict)]" : e.remote ? "text-[var(--p-ink)]" : "text-[var(--p-faint)]"
   return (
     <div className={`flex gap-2 whitespace-nowrap ${tone} ${flagged ? "bg-white/[.03]" : ""}`}>
-      <span className="text-[#5d6b80]">{e.label.slice(-8)}</span>
-      <span className="w-11 shrink-0 text-[#93a1b5]">{e.remote ? "AUTH" : "LOGON"}</span>
+      <span className="text-[var(--p-faint)]">{e.label.slice(-8)}</span>
+      <span className="w-11 shrink-0 text-[var(--p-muted)]">{e.remote ? "AUTH" : "LOGON"}</span>
       <span className="w-16 shrink-0 truncate">{e.user}</span>
       <span className="truncate">{e.remote ? `${e.src} → ${e.dst}` : e.dst}</span>
-      <span className="truncate text-[#5d6b80] max-sm:hidden">{e.remote ? `${ROLE_SHORT[e.src_role] ?? e.src_role} → ${ROLE_SHORT[e.dst_role] ?? e.dst_role}` : "local logon"}{e.from_compromised && <b className="ml-1 text-[#f2555a]">from compromised</b>}</span>
+      <span className="truncate text-[var(--p-faint)] max-sm:hidden">{e.remote ? `${ROLE_SHORT[e.src_role] ?? e.src_role} → ${ROLE_SHORT[e.dst_role] ?? e.dst_role}` : "local logon"}{e.from_compromised && <b className="ml-1 text-[var(--attack)]">from compromised</b>}</span>
       <span className="ml-auto shrink-0 font-medium">{flag}</span>
-      {reveal && e.attack && <span className="shrink-0 rounded bg-[#f2555a] px-1 text-white">ATTACK hop {e.step}</span>}
+      {reveal && e.attack && <span className="shrink-0 rounded bg-[var(--attack)] px-1 text-white">ATTACK hop {e.step}</span>}
     </div>
   )
 }
