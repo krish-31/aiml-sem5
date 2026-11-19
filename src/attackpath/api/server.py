@@ -40,7 +40,7 @@ GRAPHS = ROOT / "data" / "processed" / "synthetic.pt"
 NODES = ROOT / "data" / "synthetic" / "nodes.parquet"
 EVENTS = ROOT / "data" / "synthetic" / "events.parquet"
 EVAL = ROOT / "results" / "eval_synthetic.json"
-WEB = ROOT / "web"
+WEB = ROOT / "web" / "dist"  # React build: cd web && npm install && npm run build
 DEMO_NETWORK = int(os.environ.get("ATTACKPATH_DEMO_NETWORK", 62))
 
 CRITICAL_ROLES = {"domain_controller", "database"}
