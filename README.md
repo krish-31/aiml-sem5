@@ -10,7 +10,9 @@ activity to predict an attacker's next hop. The system then ranks the most likel
 to critical assets and recommends a defensive action, such as isolating a machine or removing a
 privilege.
 
-See [ROADMAP.md](ROADMAP.md) for the full build plan.
+See [ROADMAP.md](ROADMAP.md) for the full build plan, and [docs/research/](docs/research/README.md)
+for the research on turning Lateralis into a self-hosted platform with LLM agents, evaluated on
+real data (datasets, baselines, open-source stack, agents, evaluation, competitors).
 
 ## Setup
 ```bash
