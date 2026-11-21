@@ -16,21 +16,19 @@ Background and evidence for each item: [the platform research report](reports/La
 | 7 | Data and evaluation | Real datasets and rigorous evaluation are required. No deadline pressure. |
 | 8 | "Real data" scope | LANL 2015 and DARPA OpTC, **plus** emulated-attack telemetry from the Docker lab, all count as real data for training and evaluation. |
 | 9 | Headline results | Report **both** next-hop forecasting (Hits@k, MRR) and detection (event-level AP, AUC) as headline results. |
-| 10 | Disk budget | Not a constraint. LMDG (253 GB+) is available as an optional third dataset. |
+| 10 | Disk budget | Enough for LANL and an OpTC subset (88 GB free on C:). LMDG (253 GB+) is **dropped**. |
 | 11 | Lateralis licence | Apache-2.0 (no preference stated; chosen for adoption and simplicity). |
 | 12 | Research write-up | Markdown in the repo under `docs/research/`. |
+| 13 | Data location | `C:\lateralis-data`, outside OneDrive, read from the `LATERALIS_DATA` environment variable. |
+| 14 | LANL files | Use all five: auth, redteam, flows, proc and dns (~12 GB compressed). |
+| 15 | Graph type on LANL | Heterogeneous user + computer graph, with a computer-only ablation. |
+| 16 | Agent framework | LangGraph (`interrupt()` for approvals). |
+| 17 | Gemini free tier | Only for lab, synthetic and docs data, never customer logs. |
+| 18 | Observability | Arize Phoenix locally (Elastic License 2.0). |
+| 19 | SOAR in the bundle | Built-in action executor, with Shuffle as an optional profile. |
+| 20 | Local LLM role | Ollama as tool-less log summariser and offline copilot fallback. |
+| 21 | Market framing | Generic, with an India section (DPDP Act, CERT-In). |
+| 22 | Defense recommender scope | Recommend, then execute through the response agent after human approval. |
 
-## Proposed defaults (not yet confirmed)
-
-These follow the report's recommendations and stay open until reviewed.
-
-| # | Topic | Proposed default | Alternative |
-|---|---|---|---|
-| A | Graph type on LANL | Heterogeneous user + computer graph, with a computer-only ablation | Computer → computer only, as in Euler |
-| B | Agent framework | LangGraph (`interrupt()` for approvals) | PydanticAI |
-| C | Gemini free tier | Only for lab, synthetic and docs data, never customer logs | Exclude entirely |
-| D | Observability | Arize Phoenix locally (Elastic License 2.0) | Langfuse (MIT core, much heavier) |
-| E | SOAR in the bundle | Built-in action executor, with Shuffle as an optional profile | Shuffle or Tracecat required |
-| F | Local LLM role | Ollama as tool-less log summariser and offline copilot fallback | No local model |
-| G | Market framing | Generic, with an India section (DPDP Act, CERT-In) | India-first |
-| H | Defense recommender scope | Recommend, then execute through the response agent after human approval | Recommend only |
+Decisions 13–22 confirmed on 2026-11-21 (15–22 were proposed defaults A–H, accepted as-is).
+The build plan that follows from them is in [ROADMAP.md](../../ROADMAP.md).
