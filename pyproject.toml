@@ -3,6 +3,8 @@ name = "attackpath"
 version = "0.1.0"
 description = "Temporal graph learning for cyber attack-path forecasting and adaptive defense"
 requires-python = ">=3.11,<3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = [
     "numpy>=1.26",
     "pandas>=2.2",
