@@ -1,7 +1,14 @@
-# Presenting Lateralis (7–8 min)
+# Presenting Lateralis (8–9 min)
 
-Open `demo/lateralis.html` in Chrome (double-click; no install, no server, works offline).
-Press **F** for fullscreen. Fonts load from Google Fonts if online, local fallback otherwise.
+Two pages, both open with a double-click (no install, no server):
+
+- `demo/index.html`: the **website** (what Lateralis is, how it works, download and setup). Plain
+  language, no metrics, for a first-time audience.
+- `demo/simulation.html`: the **simulation** (attack replay, event stream, results, pipeline).
+  Linked from the website ("Try the simulation") and back again with **← HOME**.
+
+Or serve the folder: `python -m http.server 8080` → http://localhost:8080/demo/
+Press **F** in the simulation for fullscreen.
 
 ## Controls
 
@@ -17,9 +24,13 @@ Press **F** for fullscreen. Fonts load from Google Fonts if online, local fallba
 | `` ` `` | hacker terminal (`help`, `scan`, `forecast`, `paths`, `defend`, `stats`) |
 | `F` | fullscreen |
 
-Open `lateralis.html#skip` to jump straight past the boot screen.
+Open `simulation.html#skip` to jump straight past the boot screen.
 
 ## Script
+
+**Start on the website (1 min).** Open `index.html`. Scroll once through it: the hero animation (intruder
+hops, gets blocked), "The problem", "How it works" in three steps, the four AI assistants, and the
+install section (switch Windows/macOS tabs, show a Copy button). Then click **Try the simulation**.
 
 **0. Boot (15 s).** Let the boot log run, press Enter.
 > "This is Lateralis: it forecasts where a hacker moves next inside a company network, and cuts them off."
@@ -60,5 +71,5 @@ model's behaviour on that incident. Every number on **Model Intel** comes from t
 ## Rebuild
 
 ```bash
-python demo/build_demo.py     # re-bakes demo/lateralis.html from demo/lobby.template.html + results/
+python demo/build_demo.py     # re-bakes demo/simulation.html from demo/lobby.template.html + results/
 ```
