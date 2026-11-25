@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lateralis</title>
+<meta name="description" content="Lateralis spots a break-in inside your company network, predicts where the intruder will go next, and suggests the simplest way to stop them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04080a; --bg2: #08110f; --card: #0a1613; --line: rgba(57,255,136,.12); --line2: rgba(57,255,136,.28);
+  --g: #39ff88; --g2: #1fae5c; --r: #ff3b5c; --a: #ffb000; --c: #2ee6ff; --p: #b26bff;
+  --txt: #e3f7ec; --mut: #8fb1a1; --faint: #3c5c4e;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --disp: "Chakra Petch", var(--sans); --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--txt); font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--g); color: #001a0b; }
+.wrap { width: min(1160px, 100% - 40px); margin: 0 auto; }
+.bgfx { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(900px 500px at 78% 8%, rgba(57,255,136,.10), transparent 60%), radial-gradient(700px 500px at 5% 40%, rgba(46,230,255,.05), transparent 60%),
+  linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 56px 56px, linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 56px 56px;
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.5) 60%, transparent 100%); }
+
+/* nav */
+nav { position: sticky; top: 0; z-index: 50; background: rgba(4,8,10,.88); border-bottom: 1px solid transparent; transition: border-color .3s; }
+nav.scrolled { border-bottom-color: var(--line); }
+nav .wrap { display: flex; align-items: center; gap: 28px; height: 68px; }
+.brand { display: flex; align-items: center; gap: 10px; font: 700 19px var(--disp); letter-spacing: .2em; }
+.links { display: flex; gap: 26px; margin-left: auto; font-size: 14.5px; color: var(--mut); }
+.links a { transition: color .2s; } .links a:hover { color: var(--txt); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 22px; border-radius: 10px; font: 600 15px var(--sans); cursor: pointer; border: 1px solid transparent; transition: transform .2s var(--ease), box-shadow .25s, background .25s, border-color .25s, color .25s; white-space: nowrap; }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0); }
+.btn.pri { background: var(--g); color: #00170a; box-shadow: 0 8px 30px -8px rgba(57,255,136,.55); }
+.btn.pri:hover { box-shadow: 0 12px 38px -8px rgba(57,255,136,.75); }
+.btn.sec { border-color: var(--line2); color: var(--txt); background: rgba(10,22,19,.6); }
+.btn.sec:hover { border-color: var(--g); color: var(--g); }
+.btn.sm { padding: 9px 16px; font-size: 14px; }
+
+/* hero */
+.hero { padding: 72px 0 90px; }
+.hero .wrap { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
+.tag { display: inline-flex; align-items: center; gap: 9px; padding: 6px 13px; border: 1px solid var(--line2); border-radius: 99px; font-size: 13px; color: var(--mut); }
+.tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--g); box-shadow: 0 0 10px var(--g); }
+h1 { font: 700 clamp(36px, 4.6vw, 58px)/1.06 var(--disp); letter-spacing: -.005em; margin: 22px 0 20px; }
+h1 em { font-style: normal; color: var(--g); }
+.lead { font-size: 19px; color: var(--mut); max-width: 34em; }
+.ctas { display: flex; gap: 14px; flex-wrap: wrap; margin: 34px 0 22px; }
+.small { font-size: 13.5px; color: var(--faint); display: flex; gap: 18px; flex-wrap: wrap; }
+.small span::before { content: "✓ "; color: var(--g2); }
+.viz { position: relative; aspect-ratio: 1 / .92; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(160deg, rgba(12,28,24,.9), rgba(4,10,9,.95)); overflow: hidden; }
+.viz svg { width: 100%; height: 100%; display: block; }
+.viz .cap { position: absolute; left: 18px; bottom: 16px; right: 18px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--mut); }
+.viz .cap span { display: inline-flex; align-items: center; gap: 7px; } .viz .cap i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+/* sections */
+section { padding: 96px 0; }
+.kicker { font: 600 13px var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--g); margin-bottom: 14px; }
+h2 { font: 700 clamp(30px, 3.6vw, 44px)/1.12 var(--disp); max-width: 20em; }
+.intro { color: var(--mut); font-size: 18px; max-width: 40em; margin-top: 16px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; transition: border-color .3s, transform .3s var(--ease); }
+.card:hover { border-color: var(--line2); transform: translateY(-4px); }
+.card h3 { font: 600 19px var(--sans); margin: 16px 0 8px; }
+.card p { color: var(--mut); font-size: 15.5px; }
+.ico { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: rgba(57,255,136,.08); border: 1px solid var(--line2); }
+.ico svg { width: 22px; height: 22px; stroke: var(--g); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ico.red { background: rgba(255,59,92,.08); border-color: rgba(255,59,92,.3); } .ico.red svg { stroke: var(--r); }
+
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; counter-reset: s; position: relative; }
+.step { position: relative; padding: 28px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); }
+.step .n { font: 700 15px var(--disp); color: #00170a; background: var(--g); width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; }
+.step h3 { font: 600 20px var(--sans); margin: 18px 0 8px; } .step p { color: var(--mut); }
+.step .eg { margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px dashed var(--line2); font-size: 14px; color: var(--txt); }
+.step .eg b { color: var(--a); font-weight: 600; }
+
+.feat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+.agents { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 28px; }
+.agent { padding: 22px; border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(57,255,136,.05), transparent); }
+.agent b { display: block; font-size: 16px; margin-bottom: 6px; } .agent p { color: var(--mut); font-size: 14.5px; }
+.agent .who { font: 600 11.5px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--g); margin-bottom: 10px; }
+
+/* setup */
+.setup { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; margin-top: 44px; align-items: start; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); background: rgba(0,0,0,.25); flex-wrap: wrap; }
+.tabs button { flex: 1; min-width: 110px; padding: 10px 14px; border-radius: 9px; border: 0; background: none; color: var(--mut); font: 600 14.5px var(--sans); cursor: pointer; transition: background .25s, color .25s; }
+.tabs button.on { background: rgba(57,255,136,.12); color: var(--g); }
+.tabs button:hover:not(.on) { color: var(--txt); }
+.mode { display: flex; gap: 8px; padding: 18px 24px 0; flex-wrap: wrap; }
+.mode button { padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line2); background: none; color: var(--mut); font: 500 13.5px var(--sans); cursor: pointer; transition: all .25s; }
+.mode button.on { border-color: var(--g); color: var(--g); background: rgba(57,255,136,.06); }
+.mode .soon { font-size: 10.5px; margin-left: 6px; padding: 2px 6px; border-radius: 5px; background: rgba(255,176,0,.14); color: var(--a); letter-spacing: .06em; }
+.body { padding: 10px 24px 26px; }
+.body .fade { animation: fade .45s var(--ease); }
+@keyframes fade { from { opacity: 0; transform: translateY(6px) } }
+.st { margin-top: 18px; }
+.st h4 { font: 600 15.5px var(--sans); display: flex; align-items: center; gap: 10px; }
+.st h4 span { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; background: rgba(57,255,136,.12); color: var(--g); font-size: 12.5px; }
+.st p { color: var(--mut); font-size: 14.5px; margin: 4px 0 0 34px; }
+.code { position: relative; margin: 10px 0 0 34px; background: #020605; border: 1px solid var(--line); border-radius: 10px; padding: 13px 52px 13px 16px; font: 13.5px/1.7 var(--mono); color: #bff5d6; white-space: pre; overflow-x: auto; }
+.code .pr { color: var(--faint); user-select: none; }
+.copy { position: absolute; right: 8px; top: 8px; padding: 5px 9px; border-radius: 7px; border: 1px solid var(--line2); background: var(--card); color: var(--mut); font: 500 12px var(--sans); cursor: pointer; transition: all .2s; }
+.copy:hover { color: var(--g); border-color: var(--g); } .copy.ok { color: #00170a; background: var(--g); border-color: var(--g); }
+.soonbox { margin-top: 18px; padding: 22px; border: 1px dashed rgba(255,176,0,.4); border-radius: 12px; background: rgba(255,176,0,.04); }
+.soonbox p { color: var(--mut); font-size: 15px; margin-top: 6px; }
+.dl { padding: 26px; }
+.dl h3 { font: 600 19px var(--sans); margin-bottom: 6px; } .dl > p { color: var(--mut); font-size: 15px; }
+.dl .btn { width: 100%; margin-top: 14px; }
+.req { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 20px; }
+.req h4 { font: 600 13px var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--mut); margin-bottom: 12px; }
+.req li { list-style: none; display: flex; gap: 10px; font-size: 14.5px; padding: 6px 0; color: var(--txt); }
+.req li::before { content: "→"; color: var(--g); }
+
+/* sim cta */
+.simcta { position: relative; overflow: hidden; border-radius: 22px; border: 1px solid var(--line2); padding: 56px; display: grid; grid-template-columns: 1.4fr auto; gap: 30px; align-items: center;
+  background: radial-gradient(600px 300px at 90% 0%, rgba(255,59,92,.14), transparent 70%), radial-gradient(500px 300px at 0% 100%, rgba(57,255,136,.12), transparent 70%), var(--bg2); }
+.simcta p { color: var(--mut); font-size: 17px; margin-top: 12px; max-width: 34em; }
+.simcta .btn { padding: 17px 28px; font-size: 16px; }
+
+/* faq */
+.faq { margin-top: 40px; display: grid; gap: 12px; max-width: 860px; }
+details { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 0 22px; transition: border-color .3s; }
+details[open] { border-color: var(--line2); }
+summary { list-style: none; cursor: pointer; padding: 20px 0; font: 600 16.5px var(--sans); display: flex; justify-content: space-between; gap: 16px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; color: var(--g); font-size: 22px; line-height: 1; transition: transform .3s var(--ease); }
+details[open] summary::after { transform: rotate(45deg); }
+details p { color: var(--mut); padding: 0 0 20px; font-size: 15.5px; }
+
+footer { border-top: 1px solid var(--line); padding: 36px 0 46px; color: var(--faint); font-size: 14px; }
+footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+footer a:hover { color: var(--g); }
+
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+.reveal.in { opacity: 1; transform: none; }
+.toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px); opacity: 0; padding: 11px 18px; border-radius: 10px; background: var(--g); color: #00170a; font-weight: 600; font-size: 14px; transition: all .35s var(--ease); z-index: 99; pointer-events: none; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 960px) {
+  .hero .wrap, .setup, .simcta { grid-template-columns: 1fr; }
+  .grid3, .steps, .feat { grid-template-columns: 1fr; } .agents { grid-template-columns: 1fr 1fr; }
+  .links { display: none; } .simcta { padding: 34px 24px; } section { padding: 70px 0; }
+  .code { margin-left: 0; } .st p { margin-left: 0; }
+}
+@media (max-width: 560px) { .agents { grid-template-columns: 1fr; } nav .btn { display: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div class="bgfx"></div>
+
+<nav id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#39ff88" stroke-width="1.6"><path d="M13 1 25 8v10l-12 7L1 18V8z"/><circle cx="13" cy="13" r="3" fill="#ff3b5c" stroke="none"/></svg>
+      LATERALIS
+    </a>
+    <div class="links">
+      <a href="#how">How it works</a><a href="#features">Features</a><a href="#setup">Install</a><a href="#faq">FAQ</a>
+    </div>
+    <a class="btn sec sm" href="simulation.html">Try the simulation</a>
+    <a class="btn pri sm" href="#setup">Download</a>
+  </div>
+</nav>
+
+<!-- ============================================================ HERO -->
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <span class="tag"><i></i>Free and open source network security</span>
+      <h1>Know where an intruder will go <em>next</em>, before they get there.</h1>
+      <p class="lead">When a hacker gets into one computer at a company, they quietly move from machine to machine until they reach something valuable. Lateralis watches for that, predicts their next step, and tells you the simplest way to block it.</p>
+      <div class="ctas">
+        <a class="btn pri" href="#setup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+          Download Lateralis
+        </a>
+        <a class="btn sec" href="simulation.html">Watch a simulated attack →</a>
+      </div>
+      <div class="small"><span>Runs on your own computer</span><span>Windows, macOS, Linux</span><span>No special hardware</span></div>
+    </div>
+
+    <div class="viz reveal" aria-label="Animation: an intruder moves between computers, Lateralis predicts the next one and blocks it">
+      <svg viewBox="0 0 440 400">
+        <defs>
+          <radialGradient id="glowr"><stop offset="0" stop-color="#ff3b5c" stop-opacity=".55"/><stop offset="1" stop-color="#ff3b5c" stop-opacity="0"/></radialGradient>
+          <radialGradient id="glowa"><stop offset="0" stop-color="#ffb000" stop-opacity=".45"/><stop offset="1" stop-color="#ffb000" stop-opacity="0"/></radialGradient>
+        </defs>
+        <g stroke="rgba(57,255,136,.16)" stroke-width="1.3">
+          <path d="M70 90 160 60M160 60 250 95M250 95 340 70M70 90 110 180M160 60 200 160M250 95 200 160M250 95 300 190M340 70 380 160M110 180 200 160M200 160 300 190M300 190 380 160M110 180 90 280M200 160 180 270M300 190 290 290M380 160 370 270M90 280 180 270M180 270 290 290M290 290 370 270M180 270 220 340M290 290 220 340"/>
+        </g>
+        <!-- predicted next step -->
+        <path d="M300 190 290 290" stroke="#ffb000" stroke-width="3" stroke-dasharray="7 6" fill="none" opacity="0">
+          <animate attributeName="stroke-dashoffset" from="0" to="-26" dur=".8s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" dur="9s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;.42;.48;.9;.95;1"/>
+        </path>
+        <circle cx="290" cy="290" r="34" fill="url(#glowa)" opacity="0"><animate attributeName="opacity" dur="9s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;.42;.48;.9;.95;1"/></circle>
+        <!-- trail -->
+        <path d="M70 90 160 60 200 160 300 190" stroke="#ff3b5c" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="330" stroke-dashoffset="330">
+          <animate attributeName="stroke-dashoffset" dur="9s" repeatCount="indefinite" values="330;330;0;0;330" keyTimes="0;.05;.42;.95;1"/>
+        </path>
+        <g fill="#2c6b4c">
+          <circle cx="160" cy="60" r="8"/><circle cx="250" cy="95" r="8"/><circle cx="340" cy="70" r="8"/><circle cx="110" cy="180" r="8"/><circle cx="200" cy="160" r="9"/><circle cx="380" cy="160" r="8"/><circle cx="90" cy="280" r="8"/><circle cx="180" cy="270" r="8"/><circle cx="370" cy="270" r="8"/><circle cx="300" cy="190" r="9"/>
+        </g>
+        <rect x="278" y="278" width="24" height="24" fill="#b26bff" transform="rotate(45 290 290)"/>
+        <rect x="208" y="328" width="24" height="24" fill="#b26bff" transform="rotate(45 220 340)"/>
+        <circle cx="70" cy="90" r="22" fill="url(#glowr)"/><circle cx="70" cy="90" r="9" fill="#ff3b5c"/>
+        <!-- intruder token -->
+        <circle r="7" fill="#fff">
+          <animateMotion dur="9s" repeatCount="indefinite" path="M70 90 L160 60 L200 160 L300 190 L300 190 L296 230 L300 190 L300 190" keyPoints="0;0;.25;.5;.75;.75;.86;.9;.9" keyTimes="0;.05;.17;.29;.42;.6;.68;.74;1" calcMode="linear"/>
+        </circle>
+        <!-- shield -->
+        <g opacity="0">
+          <animate attributeName="opacity" dur="9s" repeatCount="indefinite" values="0;0;1;1;0" keyTimes="0;.56;.62;.95;1"/>
+          <circle cx="295" cy="240" r="20" fill="rgba(46,230,255,.12)" stroke="#2ee6ff" stroke-width="2.4"/>
+          <path d="M287 240h16M295 232v16" stroke="#2ee6ff" stroke-width="2.6" transform="rotate(45 295 240)"/>
+        </g>
+        <g font-family="Inter, sans-serif" font-size="13" font-weight="600">
+          <text x="34" y="62" fill="#ff3b5c">Break-in</text>
+          <text x="320" y="330" fill="#ffb000">Likely next target<animate attributeName="opacity" dur="9s" repeatCount="indefinite" values="0;0;1;1;0" keyTimes="0;.44;.5;.95;1"/></text>
+          <text x="322" y="236" fill="#2ee6ff" opacity="0">Blocked<animate attributeName="opacity" dur="9s" repeatCount="indefinite" values="0;0;1;1;0" keyTimes="0;.58;.64;.95;1"/></text>
+        </g>
+      </svg>
+      <div class="cap"><span><i style="background:#ff3b5c"></i>Intruder</span><span><i style="background:#ffb000"></i>Predicted next move</span><span><i style="background:#2ee6ff"></i>Blocked</span><span><i style="background:#b26bff;border-radius:2px"></i>Valuable systems</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================ PROBLEM -->
+<section id="problem">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">The problem</div>
+    <h2>Most break-ins aren't one big hit. They're a quiet walk through your network.</h2></div>
+    <div class="grid3">
+      <div class="card reveal"><div class="ico red"><svg viewBox="0 0 24 24"><path d="M4 12h4l3-8 4 16 3-8h2"/></svg></div><h3>It starts small</h3><p>An attacker usually gets in through one ordinary laptop, often from a phishing email or a reused password.</p></div>
+      <div class="card reveal"><div class="ico red"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20c-.5-2.6-2-4.4-4-5.1"/></svg></div><h3>Each step looks normal</h3><p>They log in with stolen passwords, so every single move looks like a regular employee doing their job.</p></div>
+      <div class="card reveal"><div class="ico red"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>It's found too late</h3><p>By the time anyone notices, the attacker has often reached the most important servers. Lateralis is built to catch them on the way.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ HOW -->
+<section id="how">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">How it works</div>
+    <h2>Three steps. No security degree needed.</h2>
+    <p class="intro">Lateralis treats your network like a map of who connects to what, and keeps watching how that map changes over time.</p></div>
+    <div class="steps">
+      <div class="step reveal"><div class="n">1</div><h3>Connect your records</h3><p>Point Lateralis at the login records your computers already keep. Nothing is installed on employee machines.</p><div class="eg">“Alice's laptop signed in to the <b>file server</b> at 9:14.”</div></div>
+      <div class="step reveal"><div class="n">2</div><h3>It learns what normal looks like</h3><p>It learns which people and computers usually talk to each other, and notices when someone starts moving in an unusual way.</p><div class="eg">“This laptop has never touched the <b>web server</b> before.”</div></div>
+      <div class="step reveal"><div class="n">3</div><h3>It warns you and suggests a fix</h3><p>When something looks like a break-in, it shows the computers the intruder is most likely to reach next and the simplest way to block them.</p><div class="eg">“Block this account from the <b>domain controller</b>.”</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">What you get</div>
+    <h2>Everything a small security team needs to stay one step ahead.</h2></div>
+    <div class="feat">
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg></div><h3>Next-move warnings</h3><p>See which computer an intruder is most likely to reach next, ranked from most to least likely.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7 7.5 10.5 16M17 7.5 13.5 16M7.5 6h9"/></svg></div><h3>Live network map</h3><p>A clear picture of your network showing where the intruder is, where they've been, and the routes to your most valuable systems.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><h3>One-click fixes, you stay in charge</h3><p>Get a suggested action, like blocking an account or isolating a computer. Nothing happens until you approve it.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg></div><h3>Explanations in plain English</h3><p>Built-in AI assistants explain each alert, answer questions about your network, and write the incident report for you.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><h3>Private by design</h3><p>Runs on your own machines. Names of people and computers are hidden before any AI assistant sees them.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div><h3>Ready-made reports</h3><p>Download a PDF summary of any incident: what happened, what is at risk, and what was done about it.</p></div>
+    </div>
+
+    <div class="reveal" style="margin-top:72px"><div class="kicker">Your AI helpers</div><h2 style="font-size:clamp(24px,2.6vw,32px)">Four assistants, each with one job.</h2></div>
+    <div class="agents">
+      <div class="agent reveal"><div class="who">Analyst</div><b>Explains the alert</b><p>Looks at the evidence and tells you what is going on and why it matters.</p></div>
+      <div class="agent reveal"><div class="who">Responder</div><b>Suggests the fix</b><p>Proposes the smallest action that stops the attack, and waits for your OK.</p></div>
+      <div class="agent reveal"><div class="who">Practice attacker</div><b>Tests your defenses</b><p>Runs safe, pretend attacks in a sealed test lab so you can see how you'd hold up.</p></div>
+      <div class="agent reveal"><div class="who">Chat assistant</div><b>Answers questions</b><p>Ask things like “which computers can reach the payroll server?” in everyday words.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ SETUP -->
+<section id="setup">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">Install</div>
+    <h2>Get Lateralis running on your computer.</h2>
+    <p class="intro">Pick your operating system and follow the steps. Copy each command into a terminal window.</p></div>
+    <div class="setup">
+      <div class="panel reveal">
+        <div class="tabs" id="os">
+          <button data-os="win" class="on">Windows</button><button data-os="mac">macOS</button><button data-os="linux">Linux</button>
+        </div>
+        <div class="mode" id="mode">
+          <button data-m="py" class="on">Standard install</button><button data-m="docker">Docker<span class="soon">COMING SOON</span></button>
+        </div>
+        <div class="body" id="steps"></div>
+      </div>
+      <div class="panel reveal">
+        <div class="dl">
+          <h3>Download</h3>
+          <p>Get the full source code as a ZIP file, or browse it on GitHub.</p>
+          <a class="btn pri" href="https://github.com/krish-31/aiml-sem5/archive/refs/heads/main.zip" id="dlbtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+            <span id="dltxt">Download for Windows (.zip)</span>
+          </a>
+          <a class="btn sec" href="https://github.com/krish-31/aiml-sem5" target="_blank" rel="noopener">View on GitHub</a>
+          <div class="req">
+            <h4>You'll need</h4>
+            <ul>
+              <li>Windows 10/11, macOS or Linux</li>
+              <li>Python 3.11</li>
+              <li>8 GB of memory (16 GB is smoother)</li>
+              <li>About 3 GB of free disk space</li>
+              <li>No graphics card needed</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ SIM CTA -->
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="simcta reveal">
+      <div>
+        <div class="kicker" style="color:var(--r)">Not ready to install?</div>
+        <h2 style="font-size:clamp(26px,3vw,38px)">Watch Lateralis stop an attack on a sample company network.</h2>
+        <p>A step-by-step replay of a simulated break-in. Watch the intruder move, see the warning appear, and block their next move yourself. It runs right in your browser.</p>
+      </div>
+      <a class="btn pri" href="simulation.html">Open the simulation →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">Questions</div><h2>Good to know</h2></div>
+    <div class="faq">
+      <details class="reveal"><summary>Is Lateralis free?</summary><p>Yes. It is open source under the Apache 2.0 licence, so you can use it, change it and share it at no cost.</p></details>
+      <details class="reveal"><summary>Does it send my company's data anywhere?</summary><p>No. Lateralis runs on your own computer or server. If you turn on the AI assistants, the names of people, computers and addresses are replaced with placeholders before any text leaves your machine.</p></details>
+      <details class="reveal"><summary>Will it block things on its own?</summary><p>No. Lateralis suggests what to do, but every action, like blocking an account or isolating a computer, waits for a person to approve it.</p></details>
+      <details class="reveal"><summary>What does it need from my network?</summary><p>Only the login and connection records your systems already keep. You don't install anything on employee laptops.</p></details>
+      <details class="reveal"><summary>Do I need a powerful computer?</summary><p>No. A normal laptop with 8 GB of memory is enough to try it. A graphics card is not required.</p></details>
+      <details class="reveal"><summary>Can I try it without my own data?</summary><p>Yes. Lateralis comes with sample company networks, and the online simulation lets you watch a full attack without installing anything.</p></details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Lateralis · open source under Apache-2.0 · AI &amp; ML course project (IS353IA), 2026–27</span>
+    <span><a href="simulation.html">Simulation</a> &nbsp;·&nbsp; <a href="https://github.com/krish-31/aiml-sem5" target="_blank" rel="noopener">GitHub</a> &nbsp;·&nbsp; <a href="#top">Back to top ↑</a></span>
+  </div>
+</footer>
+<div class="toast" id="toast">Copied</div>
+
+<script>
+const OS = {
+  win: { name: "Windows", shell: "PowerShell", py: ".venv\\Scripts\\python" },
+  mac: { name: "macOS", shell: "Terminal", py: ".venv/bin/python" },
+  linux: { name: "Linux", shell: "Terminal", py: ".venv/bin/python" },
+};
+let os = /Mac/i.test(navigator.platform) ? "mac" : /Linux/i.test(navigator.platform) ? "linux" : "win", mode = "py";
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const block = lines => `<div class="code">${lines.map(l => `<span class="pr">$ </span>${esc(l)}`).join("\n")}<button class="copy" data-c="${esc(lines.join("\n")).replace(/"/g, "&quot;")}">Copy</button></div>`;
+function steps() {
+  const o = OS[os], P = o.py;
+  let h;
+  if (mode === "docker") {
+    h = `<div class="soonbox"><h4 style="font:600 16px var(--sans)">One-command install is on the way</h4><p>Soon you'll be able to start everything, including the dashboard and the AI assistants, with a single Docker command. Until then, use the standard install. It takes about the same time.</p></div>
+      <div class="st"><h4><span>⏳</span>Planned command</h4>${block(["docker compose up"])}</div>`;
+  } else {
+    h = [
+      ["Get the code", `Use the download button, or copy it with Git. Open ${o.shell} first.`, ["git clone https://github.com/krish-31/aiml-sem5.git", "cd aiml-sem5"]],
+      ["Install", "This creates a private Python environment and installs everything Lateralis needs.", ["pip install uv", "uv venv --python 3.11 .venv", `uv pip install --python ${P} -e ".[ml,app]"`]],
+      ["Prepare the sample networks", "Builds the practice company networks and teaches Lateralis what normal looks like. The last step takes about 20 minutes on a laptop.", [`${P} -m attackpath.data.synthetic --n-graphs 300`, `${P} -m attackpath.graph.builder`, `${P} -m attackpath.models.train`]],
+      ["Open the dashboard", "Start Lateralis, then open the link it prints (http://127.0.0.1:8000) in your browser.", [`${P} -m attackpath.api.server`]],
+    ].map(([t, p, c], i) => `<div class="st"><h4><span>${i + 1}</span>${t}</h4><p>${p}</p>${block(c)}</div>`).join("");
+  }
+  const b = document.getElementById("steps"); b.innerHTML = `<div class="fade">${h}</div>`;
+  document.getElementById("dltxt").textContent = `Download for ${o.name} (.zip)`;
+  document.querySelectorAll("#os button").forEach(x => x.classList.toggle("on", x.dataset.os === os));
+  document.querySelectorAll("#mode button").forEach(x => x.classList.toggle("on", x.dataset.m === mode));
+}
+document.getElementById("os").onclick = e => { const b = e.target.closest("button"); if (b) { os = b.dataset.os; steps(); } };
+document.getElementById("mode").onclick = e => { const b = e.target.closest("button"); if (b) { mode = b.dataset.m; steps(); } };
+steps();
+
+const toast = msg => { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 1600); };
+document.addEventListener("click", async e => {
+  const c = e.target.closest(".copy"); if (!c) return;
+  const txt = c.dataset.c.replace(/&lt;/g, "<").replace(/&amp;/g, "&");
+  try { await navigator.clipboard.writeText(txt); } catch { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  c.textContent = "Copied"; c.classList.add("ok"); toast("Copied to clipboard"); setTimeout(() => { c.textContent = "Copy"; c.classList.remove("ok"); }, 1400);
+});
+
+const io = new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting) { x.target.classList.add("in"); io.unobserve(x.target); } }), { threshold: .12, rootMargin: "0px 0px -40px 0px" });
+document.querySelectorAll(".reveal").forEach((el, i) => { el.style.transitionDelay = (i % 4) * 70 + "ms"; io.observe(el); });
+const nav = document.getElementById("nav"); addEventListener("scroll", () => nav.classList.toggle("scrolled", scrollY > 10), { passive: true });
+</script>
+</body>
+</html>
