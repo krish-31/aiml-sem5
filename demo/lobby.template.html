@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LATERALIS // Command Lobby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+@font-face { font-family: "PlexLocal"; src: url("../src/attackpath/assets/fonts/IBMPlexMono-400.ttf"); }
+:root {
+  --bg: #020507; --bg2: #061013; --panel: rgba(6, 16, 15, .78); --panel2: rgba(10, 26, 22, .9);
+  --line: rgba(57, 255, 136, .13); --line2: rgba(57, 255, 136, .32);
+  --g: #39ff88; --g2: #1fae5c; --c: #2ee6ff; --r: #ff2d55; --a: #ffb000; --p: #b26bff;
+  --txt: #c9ffe2; --mut: #6b9a83; --faint: #2f5243;
+  --mono: "JetBrains Mono", "PlexLocal", ui-monospace, Consolas, monospace;
+  --disp: "Chakra Petch", "JetBrains Mono", "PlexLocal", monospace;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--txt); font: 13px/1.5 var(--mono); overflow: hidden; }
+body { -webkit-font-smoothing: antialiased; }
+::selection { background: var(--g); color: #000; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+#rain { position: fixed; inset: 0; z-index: 0; opacity: .32; }
+.grid-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px; mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 80%); opacity: .5; }
+.scan { position: fixed; inset: 0; z-index: 90; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+.vignette { position: fixed; inset: 0; z-index: 89; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.75)); }
+.flicker { animation: flicker 6s infinite; }
+@keyframes flicker { 0%, 97%, 100% { opacity: 1 } 97.5% { opacity: .85 } 98.5% { opacity: .95 } }
+
+/* ---------------------------------------------------------------- boot */
+#boot { position: fixed; inset: 0; z-index: 100; background: #000; display: grid; place-items: center; transition: opacity .8s var(--ease), filter .8s; }
+#boot.gone { opacity: 0; filter: blur(8px) brightness(2); pointer-events: none; }
+.boot-box { width: min(760px, 92vw); }
+#bootlog { font-size: 12.5px; color: var(--g); min-height: 300px; white-space: pre-wrap; text-shadow: 0 0 8px rgba(57,255,136,.6); }
+#bootlog .ok { color: var(--g); } #bootlog .warn { color: var(--a); } #bootlog .dim { color: var(--mut); } #bootlog .red { color: var(--r); }
+.bar { height: 3px; background: var(--faint); margin: 18px 0 8px; position: relative; overflow: hidden; }
+.bar i { position: absolute; inset: 0; width: 0; background: var(--g); box-shadow: 0 0 12px var(--g); transition: width .2s linear; }
+.boot-logo { font: 700 clamp(44px, 9vw, 96px)/1 var(--disp); letter-spacing: .14em; text-align: center; margin: 26px 0 8px; opacity: 0; transition: opacity .5s; color: #eafff3;
+  text-shadow: 0 0 18px rgba(57,255,136,.8), 0 0 60px rgba(57,255,136,.35); }
+.boot-logo.on { opacity: 1; animation: glitch 2.4s infinite; }
+.jack { text-align: center; color: var(--g); letter-spacing: .3em; opacity: 0; transition: opacity .5s; font-size: 12px; }
+.jack.on { opacity: 1; animation: blink 1.1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .15 } }
+@keyframes glitch {
+  0%, 88%, 100% { transform: none; text-shadow: 0 0 18px rgba(57,255,136,.8), 0 0 60px rgba(57,255,136,.35); clip-path: none; }
+  89% { transform: translate(-3px, 1px) skewX(-8deg); text-shadow: 3px 0 var(--r), -3px 0 var(--c); clip-path: inset(10% 0 55% 0); }
+  91% { transform: translate(3px, -1px); text-shadow: -3px 0 var(--r), 3px 0 var(--c); clip-path: inset(50% 0 8% 0); }
+  93% { transform: translate(-1px, 0); text-shadow: 2px 0 var(--r), -2px 0 var(--c); clip-path: none; }
+}
+
+/* ---------------------------------------------------------------- shell */
+#app { position: relative; z-index: 2; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); opacity: 0; transition: opacity .9s var(--ease) .1s; }
+#app.on { opacity: 1; }
+header { min-width: 0; overflow: hidden; display: flex; align-items: center; gap: 22px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(4,14,12,.95), rgba(4,14,12,.7)); backdrop-filter: blur(6px); }
+.logo { display: flex; align-items: center; gap: 10px; font: 700 18px var(--disp); letter-spacing: .22em; color: #eafff3; text-shadow: 0 0 10px rgba(57,255,136,.6); cursor: pointer; }
+.logo svg { filter: drop-shadow(0 0 6px var(--g)); }
+.logo:hover { animation: glitch .6s 1; }
+nav { display: flex; gap: 2px; }
+nav button { white-space: nowrap; position: relative; padding: 8px 14px; color: var(--mut); letter-spacing: .14em; font-size: 11.5px; text-transform: uppercase; transition: color .25s; }
+nav button:hover { color: var(--txt); }
+nav button .k { color: var(--faint); margin-right: 6px; }
+nav button.on { color: var(--g); text-shadow: 0 0 8px rgba(57,255,136,.7); }
+nav button::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 2px; background: var(--g); box-shadow: 0 0 10px var(--g); transform: scaleX(0); transition: transform .35s var(--ease); }
+nav button.on::after { transform: scaleX(1); }
+.hdr-r span, .hdr-r b { white-space: nowrap; }
+.hdr-r { margin-left: auto; display: flex; align-items: center; gap: 18px; font-size: 11px; color: var(--mut); letter-spacing: .08em; }
+.hdr-r b { color: var(--txt); font-weight: 500; }
+.threat { display: flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid var(--line2); }
+.threat .lv { display: flex; gap: 2px; } .threat .lv i { width: 5px; height: 12px; background: var(--faint); transition: background .4s, box-shadow .4s; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--g); box-shadow: 0 0 8px var(--g); display: inline-block; animation: pulse 1.6s infinite; }
+@keyframes pulse { 50% { opacity: .3 } }
+main { position: relative; overflow: hidden; }
+.view { position: absolute; inset: 0; padding: 18px 20px; overflow-y: auto; overflow-x: hidden; opacity: 0; transform: translateY(14px) scale(.995); pointer-events: none; transition: opacity .55s var(--ease), transform .55s var(--ease), filter .55s; filter: blur(4px); }
+.view.on { opacity: 1; transform: none; pointer-events: auto; filter: none; }
+.view::-webkit-scrollbar, .feed::-webkit-scrollbar, .tbl-wrap::-webkit-scrollbar { width: 6px; }
+.view::-webkit-scrollbar-thumb, .feed::-webkit-scrollbar-thumb, .tbl-wrap::-webkit-scrollbar-thumb { background: var(--faint); }
+footer { border-top: 1px solid var(--line); background: rgba(3,10,9,.92); overflow: hidden; font-size: 11px; color: var(--mut); white-space: nowrap; }
+.ticker { display: inline-flex; gap: 54px; padding: 7px 0; animation: tick 60s linear infinite; }
+.ticker span b { color: var(--g); font-weight: 500; } .ticker span .r { color: var(--r); } .ticker span .a { color: var(--a); }
+@keyframes tick { to { transform: translateX(-50%) } }
+
+/* ---------------------------------------------------------------- panels */
+.pnl { position: relative; background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; backdrop-filter: blur(4px); transition: border-color .3s, box-shadow .3s; }
+.pnl:hover { border-color: var(--line2); }
+.pnl::before, .pnl::after { content: ""; position: absolute; width: 10px; height: 10px; border: 2px solid var(--g); opacity: .8; }
+.pnl::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.pnl::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+.ttl { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--mut); margin-bottom: 12px; }
+.ttl b { color: var(--g); font-weight: 500; } .ttl .tag { color: var(--faint); letter-spacing: .1em; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 1px solid var(--g); color: var(--g); letter-spacing: .18em; font-size: 11.5px; text-transform: uppercase; position: relative; overflow: hidden; transition: color .25s, box-shadow .25s, background .25s; }
+.btn::before { content: ""; position: absolute; inset: 0; background: var(--g); transform: translateX(-101%); transition: transform .35s var(--ease); z-index: -1; }
+.btn:hover { color: #001a0b; box-shadow: 0 0 24px rgba(57,255,136,.45); } .btn:hover::before { transform: none; }
+.btn { z-index: 0; }
+.btn.ghost { border-color: var(--line2); color: var(--txt); } .btn.ghost::before { background: var(--line2); } .btn.ghost:hover { color: #fff; }
+.btn.red { border-color: var(--r); color: var(--r); } .btn.red::before { background: var(--r); } .btn.red:hover { color: #fff; box-shadow: 0 0 24px rgba(255,45,85,.5); }
+.btn.cy { border-color: var(--c); color: var(--c); } .btn.cy::before { background: var(--c); } .btn.cy:hover { color: #001; box-shadow: 0 0 24px rgba(46,230,255,.5); }
+.btn.sm { padding: 6px 11px; font-size: 10.5px; }
+.btn.on { background: var(--g); color: #001a0b; }
+.pill { display: inline-block; padding: 1px 7px; font-size: 10px; letter-spacing: .12em; border: 1px solid currentColor; text-transform: uppercase; }
+.c-g { color: var(--g) } .c-r { color: var(--r) } .c-a { color: var(--a) } .c-c { color: var(--c) } .c-p { color: var(--p) } .c-m { color: var(--mut) } .c-t { color: var(--txt) }
+
+/* ---------------------------------------------------------------- lobby */
+.lobby { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; min-height: 100%; }
+.hero { padding: 26px 28px 22px; display: flex; flex-direction: column; gap: 18px; }
+.eyebrow { color: var(--g); letter-spacing: .3em; font-size: 11px; }
+.big { font: 700 clamp(54px, 7.2vw, 108px)/.9 var(--disp); letter-spacing: .06em; color: #effff6; text-shadow: 0 0 24px rgba(57,255,136,.55); animation: glitch 5s infinite; }
+.lede { font: 500 clamp(17px, 1.7vw, 23px)/1.35 var(--disp); color: var(--txt); max-width: 30ch; }
+.lede em { font-style: normal; color: var(--a); } .lede strong { color: var(--r); font-weight: 500; }
+.sub { color: var(--mut); max-width: 62ch; }
+.ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+.kpi { padding: 12px 14px; border: 1px solid var(--line); background: rgba(5,14,12,.7); position: relative; overflow: hidden; }
+.kpi::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 40%, rgba(57,255,136,.08) 50%, transparent 60%); transform: translateX(-100%); animation: shine 5s infinite; }
+.kpi:nth-child(2)::after { animation-delay: .7s } .kpi:nth-child(3)::after { animation-delay: 1.4s } .kpi:nth-child(4)::after { animation-delay: 2.1s } .kpi:nth-child(5)::after { animation-delay: 2.8s } .kpi:nth-child(6)::after { animation-delay: 3.5s }
+@keyframes shine { 40%, 100% { transform: translateX(100%) } }
+.kpi .v { font: 700 28px/1.1 var(--disp); color: var(--g); text-shadow: 0 0 12px rgba(57,255,136,.5); }
+.kpi .l { font-size: 10px; letter-spacing: .16em; color: var(--mut); text-transform: uppercase; margin-top: 4px; }
+.lob-r { display: grid; grid-template-rows: auto auto 1fr; gap: 18px; }
+.radar-row { display: grid; grid-template-columns: 170px 1fr; gap: 16px; align-items: center; }
+.radar { width: 170px; height: 170px; border-radius: 50%; position: relative; border: 1px solid var(--line2); overflow: hidden;
+  background: radial-gradient(circle, transparent 0 32%, var(--line) 32.5% 33%, transparent 33.5% 65%, var(--line) 65.5% 66%, transparent 66.5%), rgba(3,12,10,.9); }
+.radar::before { content: ""; position: absolute; inset: 0; background: conic-gradient(from 0deg, rgba(57,255,136,.55), rgba(57,255,136,0) 22%, transparent); animation: spin 3.2s linear infinite; border-radius: 50%; }
+.radar::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--line); box-shadow: 85px 0 0 -0px transparent; }
+.radar i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--r); box-shadow: 0 0 10px var(--r); animation: pulse 1.2s infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
+.ops { display: flex; flex-direction: column; gap: 6px; }
+.op { display: grid; grid-template-columns: 82px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 12px; border: 1px solid var(--line); background: rgba(5,14,12,.6); transition: border-color .25s, background .25s, transform .25s var(--ease); }
+.op:hover { border-color: var(--line2); transform: translateX(4px); }
+.op.live { border-color: rgba(255,45,85,.5); background: linear-gradient(90deg, rgba(255,45,85,.1), rgba(5,14,12,.6)); }
+.op .nm { font-weight: 700; color: var(--txt); } .op .meta { color: var(--mut); font-size: 11px; }
+.roster { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.agent { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); background: rgba(5,14,12,.6); }
+.agent .av { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--g2); color: var(--g); font: 700 11px var(--disp); }
+.agent .n { color: var(--txt); font-size: 11.5px; } .agent .s { color: var(--mut); font-size: 10px; }
+.syslog { font-size: 11px; color: var(--mut); height: 100%; min-height: 120px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.syslog div { animation: fadein .4s var(--ease); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes fadein { from { opacity: 0; transform: translateY(4px) } }
+
+/* ---------------------------------------------------------------- war room */
+.war { display: grid; grid-template-columns: 320px minmax(0, 1fr) 350px; grid-template-rows: 1fr; gap: 14px; height: 100%; min-height: 600px; }
+.mapbox { grid-column: 2; grid-row: 1; }
+.mapbox { position: relative; padding: 0; overflow: hidden; }
+.maphud { position: absolute; left: 14px; top: 12px; right: 14px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 3; pointer-events: none; }
+.maphud > * { pointer-events: auto; }
+.maphud .ttl { margin: 0; }
+.legend { display: flex; gap: 14px; font-size: 10px; color: var(--mut); letter-spacing: .1em; flex-wrap: wrap; justify-content: flex-end; max-width: 60%; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; } .legend i { width: 9px; height: 9px; display: inline-block; }
+.sweep { position: absolute; left: 50%; top: 50%; width: 140vmax; height: 140vmax; transform: translate(-50%, -50%); pointer-events: none; z-index: 0; opacity: .5;
+  background: conic-gradient(from 0deg, rgba(57,255,136,.10), transparent 12%, transparent); animation: spin 7s linear infinite; }
+#map { position: absolute; inset: 40px 0 64px 0; width: 100%; height: calc(100% - 104px); z-index: 1; }
+.controls { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); background: rgba(3,10,9,.85); }
+.tl { flex: 1; position: relative; height: 34px; margin: 0 34px; }
+.tl .rail { position: absolute; left: 8px; right: 8px; top: 15px; height: 2px; background: var(--faint); }
+.tl .fill { position: absolute; left: 8px; top: 15px; height: 2px; background: var(--r); box-shadow: 0 0 10px var(--r); transition: width .6s var(--ease); }
+.tl .st { position: absolute; top: 0; transform: translateX(-50%); text-align: center; cursor: pointer; font-size: 9.5px; color: var(--mut); letter-spacing: .08em; }
+.tl .st i { display: block; width: 12px; height: 12px; margin: 10px auto 3px; border: 2px solid var(--faint); background: var(--bg); transform: rotate(45deg); transition: all .35s var(--ease); }
+.tl .st.done i { border-color: var(--r); background: var(--r); box-shadow: 0 0 10px var(--r); }
+.tl .st.cur i { transform: rotate(45deg) scale(1.35); }
+.tl .st.blocked i { border-color: var(--c); background: var(--c); box-shadow: 0 0 10px var(--c); }
+.tl .st .tlab { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.side { display: flex; flex-direction: column; gap: 14px; overflow: auto; grid-row: 1; grid-column: 3; padding-right: 2px; }
+.gauge-row { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: center; }
+.gauge-txt .big2 { font: 700 30px var(--disp); line-height: 1; transition: color .4s; }
+.gauge-txt .lab { font-size: 10px; letter-spacing: .16em; color: var(--mut); text-transform: uppercase; }
+.hop { display: grid; grid-template-columns: 26px 54px 1fr 50px; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; transition: background .3s; }
+.hop .rk { color: var(--mut); } .hop .nm { color: var(--txt); font-weight: 700; }
+.hop .track { height: 8px; background: rgba(255,176,0,.08); position: relative; overflow: hidden; }
+.hop .track i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, rgba(255,176,0,.4), var(--a)); box-shadow: 0 0 10px rgba(255,176,0,.6); transition: width .8s var(--ease); }
+.hop .pr { text-align: right; color: var(--a); }
+.hop.truth .nm::after { content: " ◆ TRUE"; color: var(--r); font-size: 9.5px; letter-spacing: .1em; }
+.hop.truth { background: linear-gradient(90deg, rgba(255,45,85,.14), transparent); }
+.path { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; border: 1px solid var(--line); margin-bottom: 5px; font-size: 11.5px; transition: border-color .3s, background .3s; }
+.path .chain { color: var(--txt); } .path .chain .arr { color: var(--a); margin: 0 3px; }
+.path .chain .crit { color: var(--p); font-weight: 700; }
+.path.match { border-color: var(--r); background: rgba(255,45,85,.08); }
+.path.match .pp::before { content: "MATCH  "; color: var(--r); font-size: 9.5px; letter-spacing: .1em; }
+.path .pp { color: var(--a); white-space: nowrap; }
+.cm { border: 1px solid rgba(46,230,255,.35); background: rgba(46,230,255,.05); padding: 10px 12px; }
+.cm .act { font: 700 14px var(--disp); color: var(--c); letter-spacing: .05em; }
+.cm .nums { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0 10px; }
+.cm .nums div { font-size: 10px; color: var(--mut); letter-spacing: .1em; } .cm .nums b { display: block; font: 700 18px var(--disp); color: var(--txt); letter-spacing: 0; }
+.alt { font-size: 11px; color: var(--mut); margin-top: 8px; }
+.feedbox { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-height: 0; }
+.feed { flex: 1; overflow: auto; font-size: 11px; line-height: 1.5; min-height: 0; }
+.feed div { white-space: normal; padding: 2px 0; border-bottom: 1px solid rgba(57,255,136,.04); animation: fadein .3s var(--ease); }
+.feed .t { color: var(--faint); } .feed .hi { color: var(--r); } .feed .md { color: var(--a); } .feed .mdl { color: var(--c); } .feed .ok { color: var(--g); } .feed .dim { color: var(--mut); }
+.banner { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(.9); z-index: 5; padding: 18px 34px; font: 700 clamp(22px, 3vw, 38px) var(--disp); letter-spacing: .14em; text-align: center; opacity: 0; pointer-events: none; transition: opacity .4s, transform .5s var(--ease); background: rgba(0,0,0,.75); border: 2px solid; }
+.banner small { display: block; font: 500 12px var(--mono); letter-spacing: .2em; margin-top: 6px; opacity: .8; }
+.banner.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.banner.red { color: var(--r); border-color: var(--r); box-shadow: 0 0 60px rgba(255,45,85,.5); animation: glitch 1.6s infinite; }
+.banner.cy { color: var(--c); border-color: var(--c); box-shadow: 0 0 60px rgba(46,230,255,.45); }
+.alarm { position: fixed; inset: 0; z-index: 80; pointer-events: none; box-shadow: inset 0 0 160px rgba(255,45,85,.0); transition: box-shadow .4s; }
+.alarm.on { animation: alarm 1s infinite; }
+@keyframes alarm { 50% { box-shadow: inset 0 0 180px rgba(255,45,85,.55); } }
+
+/* map svg */
+#map .ring { fill: none; stroke: var(--line); stroke-width: .004; stroke-dasharray: .01 .016; }
+#map .rlab { fill: var(--mut); font: 500 .04px var(--mono); letter-spacing: .008px; }
+#map .e { stroke: rgba(57,255,136,.10); stroke-width: .0035; }
+#map .e.hot { stroke: rgba(255,176,0,.35); }
+#map .pk { fill: var(--g); filter: drop-shadow(0 0 .01px var(--g)); }
+#map .pred { fill: none; stroke: var(--a); stroke-linecap: round; stroke-dasharray: .03 .02; animation: dash 1.2s linear infinite; filter: drop-shadow(0 0 .008px var(--a)); }
+@keyframes dash { to { stroke-dashoffset: -.1 } }
+#map .atk { fill: none; stroke: var(--r); stroke-width: .014; stroke-linecap: round; filter: drop-shadow(0 0 .015px var(--r)); }
+#map .atk-flow { fill: none; stroke: #ffd0da; stroke-width: .005; stroke-dasharray: .015 .05; animation: dash .7s linear infinite; }
+#map .truth { fill: none; stroke: #ff8fa6; stroke-width: .006; stroke-dasharray: .008 .014; opacity: .95; }
+#map .blk { stroke: var(--c); stroke-width: .016; stroke-dasharray: .02 .012; filter: drop-shadow(0 0 .012px var(--c)); }
+#map .blk-x { stroke: var(--c); stroke-width: .012; }
+#map .shield { fill: rgba(46,230,255,.08); stroke: var(--c); stroke-width: .005; stroke-dasharray: .015 .01; animation: spinr 8s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes spinr { to { transform: rotate(360deg) } }
+#map .halo { fill: var(--a); opacity: .14; transition: r .8s var(--ease); }
+#map .halo2 { fill: none; stroke: var(--a); stroke-width: .003; opacity: .55; transition: r .8s var(--ease); }
+#map .nd { stroke: var(--bg); stroke-width: .006; transition: fill .4s; cursor: crosshair; }
+#map .ws { fill: #2c6b4c; } #map .sv { fill: var(--c); } #map .cr { fill: var(--p); filter: drop-shadow(0 0 .015px var(--p)); }
+#map .own { fill: var(--r) !important; filter: drop-shadow(0 0 .02px var(--r)); }
+#map .nd:hover { stroke: #fff; }
+#map .pulse { fill: none; stroke: var(--r); stroke-width: .006; transform-box: fill-box; transform-origin: center; animation: npulse 1.6s linear infinite; }
+@keyframes npulse { 0% { transform: scale(1); opacity: .9 } 80%, 100% { transform: scale(4.2); opacity: 0 } }
+#map .lab { fill: var(--mut); font: 500 .046px var(--mono); paint-order: stroke; stroke: var(--bg); stroke-width: .01; pointer-events: none; }
+#map .lab.hi { fill: var(--txt); } #map .lab.red { fill: var(--r); font-weight: 700; } #map .lab.cr { fill: var(--p); font-weight: 700; }
+#map .rtag { fill: var(--a); } #map .rtxt { fill: #000; font: 700 .038px var(--mono); pointer-events: none; }
+#map .proj { fill: #fff; filter: drop-shadow(0 0 .02px var(--r)) drop-shadow(0 0 .04px var(--r)); }
+#tip { position: fixed; z-index: 95; pointer-events: none; padding: 8px 11px; background: rgba(2,8,7,.95); border: 1px solid var(--line2); font-size: 11px; opacity: 0; transition: opacity .15s; min-width: 160px; }
+#tip b { color: var(--g); }
+
+/* ---------------------------------------------------------------- events */
+.evt-top { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.stat { padding: 10px 14px; border: 1px solid var(--line); min-width: 130px; }
+.stat .v { font: 700 22px var(--disp); } .stat .l { font-size: 10px; color: var(--mut); letter-spacing: .14em; text-transform: uppercase; }
+.tbl-wrap { max-height: calc(100vh - 290px); overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { position: sticky; top: 0; background: var(--bg2); text-align: left; font-weight: 500; color: var(--mut); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--line2); }
+td { padding: 6px 10px; border-bottom: 1px solid rgba(57,255,136,.06); }
+tr { transition: background .2s; } tbody tr:hover { background: rgba(57,255,136,.05); }
+tr.atk-row.rev { background: rgba(255,45,85,.1); } tr.atk-row.rev td:first-child { box-shadow: inset 3px 0 var(--r); }
+.sev { font-size: 10px; letter-spacing: .12em; padding: 1px 6px; border: 1px solid; }
+.sev.high { color: var(--r); } .sev.medium { color: var(--a); } .sev.low { color: var(--mut); } .sev.info { color: var(--faint); }
+.ubar { display: inline-block; width: 60px; height: 5px; background: var(--faint); vertical-align: middle; margin-right: 6px; position: relative; }
+.ubar i { position: absolute; inset: 0 auto 0 0; background: var(--g); }
+
+/* ---------------------------------------------------------------- intel */
+.intel { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; }
+.s4 { grid-column: span 4 } .s5 { grid-column: span 5 } .s6 { grid-column: span 6 } .s7 { grid-column: span 7 } .s8 { grid-column: span 8 } .s12 { grid-column: span 12 } .s3 { grid-column: span 3 }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { font: 10px var(--mono); fill: var(--mut); }
+.chart .ax { stroke: var(--faint); stroke-width: 1; }
+.chart .gr { stroke: rgba(57,255,136,.07); }
+.chart .cbar { transition: height .9s var(--ease), y .9s var(--ease); }
+.legend2 { display: flex; gap: 16px; font-size: 11px; color: var(--mut); margin-bottom: 8px; }
+.legend2 i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.mtbl td, .mtbl th { padding: 7px 10px; } .mtbl td.w { color: var(--g); font-weight: 700; }
+.note { font-size: 11px; color: var(--mut); margin-top: 10px; line-height: 1.6; }
+
+/* ---------------------------------------------------------------- pipeline */
+.pipe { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; position: relative; margin: 10px 0 20px; }
+.pipe::before { content: ""; position: absolute; left: 4%; right: 4%; top: 44px; height: 2px; background: var(--faint); }
+.pipe::after { content: ""; position: absolute; left: 4%; top: 42px; width: 120px; height: 6px; background: linear-gradient(90deg, transparent, var(--g), transparent); filter: blur(1px); animation: beam 3.2s linear infinite; }
+@keyframes beam { from { left: 2% } to { left: 92% } }
+.stage { position: relative; z-index: 1; text-align: center; cursor: pointer; }
+.stage .ic { width: 88px; height: 88px; margin: 0 auto 10px; display: grid; place-items: center; border: 1px solid var(--line2); background: var(--panel2); font: 700 22px var(--disp); color: var(--g); transform: rotate(45deg) scale(.72); transition: all .35s var(--ease); }
+.stage .ic span { transform: rotate(-45deg); }
+.stage:hover .ic, .stage.on .ic { background: var(--g); color: #001a0b; box-shadow: 0 0 30px rgba(57,255,136,.5); transform: rotate(45deg) scale(.8); }
+.stage .nm { font: 700 12px var(--disp); letter-spacing: .12em; color: var(--txt); }
+.stage .ds { font-size: 10.5px; color: var(--mut); }
+.detail { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; }
+.detail h3 { font: 700 26px var(--disp); color: var(--g); letter-spacing: .06em; margin-bottom: 8px; }
+.detail p { color: var(--txt); margin-bottom: 10px; max-width: 70ch; }
+.code { font-size: 12px; background: rgba(0,0,0,.5); border: 1px solid var(--line); padding: 12px 14px; color: var(--g); white-space: pre; overflow: auto; }
+.code .k { color: var(--p) } .code .s { color: var(--a) } .code .c { color: var(--faint) }
+
+/* ---------------------------------------------------------------- terminal */
+#term { position: fixed; left: 50%; top: 12%; width: min(760px, 92vw); transform: translate(-50%, -20px); z-index: 96; opacity: 0; pointer-events: none; transition: opacity .3s, transform .35s var(--ease); background: rgba(1,6,5,.97); border: 1px solid var(--g); box-shadow: 0 0 60px rgba(57,255,136,.25); }
+#term.on { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+#term .bar2 { display: flex; justify-content: space-between; padding: 6px 12px; font-size: 10.5px; color: var(--mut); border-bottom: 1px solid var(--line); letter-spacing: .14em; }
+#tout { height: 300px; overflow: auto; padding: 10px 14px; font-size: 12px; white-space: pre-wrap; }
+#tin { display: flex; gap: 8px; padding: 8px 14px 12px; border-top: 1px solid var(--line); color: var(--g); }
+#tin input { flex: 1; background: none; border: 0; outline: 0; color: var(--txt); font: inherit; caret-color: var(--g); }
+.toast { position: fixed; right: 20px; bottom: 46px; z-index: 97; padding: 10px 16px; background: rgba(2,10,8,.95); border: 1px solid var(--g); color: var(--g); font-size: 12px; letter-spacing: .08em; transform: translateY(20px); opacity: 0; transition: all .35s var(--ease); }
+.toast.on { transform: none; opacity: 1; }
+.keys { font-size: 10.5px; color: var(--faint); letter-spacing: .08em; }
+kbd { font: inherit; color: var(--mut); border: 1px solid var(--faint); padding: 0 5px; }
+
+@media (max-width: 1100px) {
+  .lobby, .war { grid-template-columns: 1fr; } .war { grid-template-rows: 560px auto 260px; } .side, .mapbox, .feedbox { grid-row: auto; grid-column: auto; }
+  .intel > * { grid-column: span 12 !important; } .pipe { grid-template-columns: repeat(4, 1fr); } .pipe::before, .pipe::after { display: none; }
+  nav button .k { display: none; } .hdr-r .hide-sm { display: none; }
+}
+@media (max-width: 1700px) { .hdr-r .hide-md { display: none; } header { gap: 14px; } nav button { padding: 8px 10px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+<div class="grid-bg"></div>
+<div class="scan"></div><div class="vignette"></div><div class="alarm" id="alarm"></div>
+
+<!-- =============================================================== BOOT -->
+<div id="boot">
+  <div class="boot-box">
+    <div id="bootlog"></div>
+    <div class="bar"><i id="bootbar"></i></div>
+    <div class="boot-logo" id="bootlogo">LATERALIS</div>
+    <div class="jack" id="jack">[ PRESS ENTER OR CLICK TO JACK IN ]</div>
+  </div>
+</div>
+
+<!-- =============================================================== APP -->
+<div id="app" class="flicker">
+  <header>
+    <div class="logo" data-go="lobby">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#39ff88" stroke-width="1.6"><path d="M13 1 25 8v10l-12 7L1 18V8z"/><circle cx="13" cy="13" r="3" fill="#ff2d55" stroke="none"/><path d="M13 10 7 6M13 16l6 4M10 13H4M16 13h6" opacity=".6"/></svg>
+      LATERALIS
+    </div>
+    <nav id="nav">
+      <button data-go="lobby"><span class="k">01</span>Lobby</button>
+      <button data-go="war"><span class="k">02</span>War Room</button>
+      <button data-go="events"><span class="k">03</span>Event Stream</button>
+      <button data-go="intel"><span class="k">04</span>Model Intel</button>
+      <button data-go="pipe"><span class="k">05</span>Pipeline</button>
+    </nav>
+    <div class="hdr-r">
+      <span class="hide-sm"><span class="dot"></span>&nbsp; TGNN-CORE <b>ONLINE</b></span>
+      <div class="threat"><span>THREAT</span><span class="lv" id="lv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><b id="lvtxt">GUARDED</b></div>
+      <span class="hide-sm hide-md">OPERATOR <b>KRRISH.A</b></span>
+      <span><b id="clock">--:--:--</b> IST</span>
+      <span class="keys hide-sm hide-md"><kbd>`</kbd> terminal</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ---------------------------------------------------------- LOBBY -->
+    <section class="view" id="v-lobby">
+      <div class="lobby">
+        <div class="pnl hero">
+          <div class="eyebrow" data-scr>// TEMPORAL GRAPH LEARNING · ATTACK-PATH FORECASTING · ADAPTIVE DEFENSE</div>
+          <div class="big">LATERALIS</div>
+          <div class="lede">Attackers don't jump to the crown jewels. They <strong>hop</strong>. We forecast the <em>next hop</em> and cut it before it lands.</div>
+          <p class="sub">A company network is a graph that changes every hour: machines and users are nodes, logins are edges. A temporal graph neural network (GAT + GRU) reads that evolving graph, predicts where a compromised attacker moves next, ranks full attack paths to the domain controller and database, and simulates the cheapest defensive cut.</p>
+          <div class="ctas">
+            <button class="btn" data-go="war">▶ Enter War Room</button>
+            <button class="btn ghost" data-go="intel">Model Intel</button>
+            <button class="btn ghost" data-go="pipe">How it works</button>
+          </div>
+          <div class="kpis" id="kpis"></div>
+        </div>
+        <div class="lob-r">
+          <div class="pnl">
+            <div class="ttl"><b>Active Operations</b><span class="tag">45 networks · held-out test set</span></div>
+            <div class="radar-row">
+              <div class="radar" id="radar"></div>
+              <div class="ops" id="ops"></div>
+            </div>
+          </div>
+          <div class="pnl">
+            <div class="ttl"><b>Agent Roster</b><span class="tag">pipeline modules</span></div>
+            <div class="roster" id="roster"></div>
+          </div>
+          <div class="pnl" style="display:flex;flex-direction:column">
+            <div class="ttl"><b>System Log</b><span class="tag"><span class="dot"></span></span></div>
+            <div class="syslog" id="syslog"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- WAR ROOM -->
+    <section class="view" id="v-war">
+      <div class="war">
+        <div class="pnl mapbox">
+          <div class="sweep"></div>
+          <div class="maphud">
+            <div class="ttl"><b>NET-062 · Live Replay</b>&nbsp;<span class="tag" id="asof"></span></div>
+            <div class="legend">
+              <span><i style="background:#2c6b4c"></i>WORKSTATION</span><span><i style="background:var(--c)"></i>SERVER</span>
+              <span><i style="background:var(--p);transform:rotate(45deg)"></i>CRITICAL</span><span><i style="background:var(--r)"></i>COMPROMISED</span>
+              <span><i style="background:var(--a)"></i>FORECAST</span><span><i style="background:var(--c);height:3px"></i>BLOCKED</span>
+            </div>
+          </div>
+          <svg id="map" viewBox="-1.12 -1.1 2.24 2.2" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="banner" id="banner"></div>
+          <div class="controls">
+            <button class="btn sm ghost" id="b-prev" title="previous (←)">◀</button>
+            <button class="btn sm" id="b-play" title="play (space)">▶ PLAY</button>
+            <button class="btn sm ghost" id="b-next" title="next (→)">▶▶</button>
+            <div class="tl" id="tl"></div>
+            <button class="btn sm ghost" id="b-reveal" title="reveal ground truth (R)">REVEAL TRUTH</button>
+            <button class="btn sm ghost" id="b-reset" title="reset (0)">RESET</button>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="pnl">
+            <div class="ttl"><b>Breach Risk</b><span class="tag">P(reach DC/DB)</span></div>
+            <div class="gauge-row">
+              <svg id="gauge" viewBox="0 0 120 120" width="116" height="116"></svg>
+              <div class="gauge-txt">
+                <div class="lab">Attacker at</div><div class="big2 c-r" id="g-at">C2</div>
+                <div class="lab" style="margin-top:8px">Hops observed</div><div class="big2 c-t" id="g-hops">0 / 3</div>
+                <div class="lab" style="margin-top:8px">Model confidence</div><div class="c-g" id="g-conf">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="pnl">
+            <div class="ttl"><b>Next-Hop Forecast</b><span class="tag">calibrated · T=1.01</span></div>
+            <div id="hops"></div>
+          </div>
+          <div class="pnl">
+            <div class="ttl"><b>Top Attack Paths</b><span class="tag">Yen k-shortest on −log p</span></div>
+            <div id="paths"></div>
+          </div>
+          <div class="pnl">
+            <div class="ttl"><b>Countermeasure</b><span class="tag">defense simulator</span></div>
+            <div class="cm">
+              <div class="c-m" style="font-size:10px;letter-spacing:.14em">RECOMMENDED NEXT CUT</div>
+              <div class="act" id="cm-act">—</div>
+              <div class="nums"><div>RISK REMOVED<b id="cm-drop">—</b></div><div>NORMAL TRAFFIC BLOCKED<b id="cm-cost">—</b></div></div>
+              <button class="btn cy sm" id="b-deploy" style="width:100%;justify-content:center">⛨ DEPLOY COUNTERMEASURE (D)</button>
+            </div>
+            <div class="alt" id="cm-alt"></div>
+          </div>
+        </div>
+
+        <div class="pnl feedbox">
+          <div class="ttl"><b>Live Telemetry</b><span class="tag">auth events · model output</span></div>
+          <div class="feed" id="feed"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- EVENTS -->
+    <section class="view" id="v-events">
+      <div class="pnl">
+        <div class="ttl"><b>Event Stream · NET-062 · 2026-10-31 13:40 → 17:30</b><span class="tag">path-aware flagging</span></div>
+        <div class="evt-top" id="evstats"></div>
+        <div class="evt-top">
+          <button class="btn sm on" data-f="all">ALL</button><button class="btn sm ghost" data-f="flag">FLAGGED</button><button class="btn sm ghost" data-f="atk">ATTACK ONLY</button>
+          <span style="flex:1"></span>
+          <button class="btn sm red" id="ev-reveal">REVEAL ATTACK</button>
+        </div>
+        <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Source</th><th></th><th>Destination</th><th>Unexpected (single-event)</th><th>Forecast rank</th><th>Severity</th><th>Truth</th></tr></thead><tbody id="evbody"></tbody></table></div>
+        <div class="note">Judged one at a time, the attacker's logins look <span class="c-g">normal</span>: they reuse stolen credentials on everyday routes, so the "unexpected" score stays low. Lateralis flags them because they leave a compromised machine and land on a destination the temporal GNN forecast as a likely next hop.</div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- INTEL -->
+    <section class="view" id="v-intel">
+      <div class="intel">
+        <div class="pnl s12"><div class="kpis" id="kpis2" style="grid-template-columns:repeat(6,minmax(0,1fr))"></div></div>
+        <div class="pnl s7 chart">
+          <div class="ttl"><b>Next-Hop Accuracy · 196 predictions · 45 unseen networks</b></div>
+          <div class="legend2"><span><i style="background:var(--g)"></i>Temporal GNN</span><span><i style="background:var(--c)"></i>Rule-based</span><span><i style="background:var(--faint)"></i>Random</span></div>
+          <div id="c-bars"></div>
+        </div>
+        <div class="pnl s5 chart">
+          <div class="ttl"><b>Training Run</b><span class="tag">145,666 params · early stop @19</span></div>
+          <div class="legend2"><span><i style="background:var(--a)"></i>Train hop loss</span><span><i style="background:var(--g)"></i>Val top-3</span><span><i style="background:var(--c)"></i>Val link AUC</span></div>
+          <div id="c-train"></div>
+        </div>
+        <div class="pnl s6">
+          <div class="ttl"><b>Head-to-Head</b></div>
+          <table class="mtbl"><thead><tr><th>Metric</th><th>Temporal GNN</th><th>Rule-based</th><th>Random</th></tr></thead><tbody id="mtbl"></tbody></table>
+        </div>
+        <div class="pnl s6 chart">
+          <div class="ttl"><b>Defense Trade-off</b><span class="tag">risk removed vs normal traffic blocked</span></div>
+          <div id="c-def"></div>
+          <div class="note">Contain first (isolate the compromised host), then apply the forecast-driven <span class="c-c">next cut</span>: it removes risk while blocking almost no legitimate traffic.</div>
+        </div>
+        <div class="pnl s12 chart">
+          <div class="ttl"><b>Calibration · Expected Calibration Error (lower = probabilities you can trust)</b></div>
+          <div id="c-ece"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------- PIPELINE -->
+    <section class="view" id="v-pipe">
+      <div class="pnl">
+        <div class="ttl"><b>Observe → Forecast → Defend</b><span class="tag">click a stage</span></div>
+        <div class="pipe" id="pipe"></div>
+        <div class="detail" id="pdetail"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="ticker" id="ticker"></div></footer>
+</div>
+
+<div id="tip"></div>
+<div class="toast" id="toast"></div>
+<div id="term">
+  <div class="bar2"><span>root@lateralis:~ — secure shell</span><span>ESC to close</span></div>
+  <div id="tout"></div>
+  <div id="tin"><span>root@lateralis:~$</span><input id="tinput" autocomplete="off" spellcheck="false"></div>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+/* =================================================================== data */
+const NET = D.net, N = NET.nodes, EV = D.eval;
+const ID = Object.fromEntries(N.map(n => [n.name, n.i]));
+const PATH = NET.path;                        // C2 → C111 → C57 → C67
+const HOP_T = ["15:00:05", ...NET.hops.map(h => h.time.slice(11))];
+const CRIT = N.filter(n => n.group === "critical").map(n => n.i);
+const ADJ = {}; NET.normal_edges.forEach(([a, b]) => { (ADJ[a] ||= new Set()).add(b); (ADJ[b] ||= new Set()).add(a); });
+
+/* Scripted replay of the forecast for NET-062 (stage k = attacker after k hops). */
+const FC = [
+  { risk: .41, conf: .78, hops: [["C111", .312], ["C8", .188], ["C65", .141], ["C100", .072], ["C14", .053]],
+    paths: [[["C2","C111","C67"], .141], [["C2","C111","C7"], .112], [["C2","C111","C57","C67"], .087], [["C2","C8","C7"], .079], [["C2","C65","C67"], .046]],
+    cut: { label: "REVOKE U23 · BLOCK C2 → C111", edges: [["C2","C111"]], drop: .38, cost: .0021 }, contain: { label: "ISOLATE C2", drop: .51, cost: .041 } },
+  { risk: .68, conf: .83, hops: [["C57", .341], ["C67", .220], ["C7", .151], ["C8", .093], ["C97", .048]],
+    paths: [[["C111","C67"], .220], [["C111","C57","C67"], .183], [["C111","C7"], .151], [["C111","C57","C7"], .118], [["C111","C8","C7"], .061]],
+    cut: { label: "BLOCK C111 → C57 · C111 → C67", edges: [["C111","C57"], ["C111","C67"]], drop: .44, cost: .0038 }, contain: { label: "ISOLATE C111", drop: .63, cost: .078 } },
+  { risk: .87, conf: .88, hops: [["C7", .332], ["C67", .291], ["C8", .118], ["C58", .061], ["C54", .042]],
+    paths: [[["C57","C7"], .332], [["C57","C67"], .291], [["C57","C8","C7"], .071], [["C57","C111","C67"], .044], [["C57","C8","C67"], .031]],
+    cut: { label: "REVOKE U35 ON C67 · BLOCK C57 → C7", edges: [["C57","C67"], ["C57","C7"]], drop: .58, cost: .0061 }, contain: { label: "ISOLATE C57", drop: .71, cost: .069 } },
+];
+const HOP_USER = NET.hops.map(h => h.user);
+
+/* =================================================================== utils */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const pct = (x, d = 0) => (100 * x).toFixed(d) + "%";
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const hash = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 10000) / 10000; };
+const ease = t => 1 - Math.pow(1 - t, 3);
+const nowStr = () => new Date().toLocaleTimeString("en-GB", { hour12: false });
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 2200); }
+function countUp(node, to, fmt, dur = 1400) { const t0 = performance.now(); const f = now => { const k = Math.min(1, (now - t0) / dur); node.textContent = fmt(to * ease(k)); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); }
+const GLY = "!<>-_\\/[]{}—=+*^?#01ABCDEF";
+function scramble(node) { const final = node.dataset.final ||= node.textContent; let f = 0; const tot = 22; const step = () => { node.textContent = final.split("").map((c, i) => c === " " ? " " : i < (f / tot) * final.length ? c : GLY[(Math.random() * GLY.length) | 0]).join(""); if (++f <= tot) requestAnimationFrame(step); else node.textContent = final; }; step(); }
+
+/* =================================================================== background rain */
+(() => {
+  const c = $("#rain"), x = c.getContext("2d"); let w, h, cols, drops;
+  const size = () => { w = c.width = innerWidth; h = c.height = innerHeight; cols = Math.floor(w / 16); drops = Array.from({ length: cols }, () => Math.random() * -h / 16); };
+  size(); addEventListener("resize", size);
+  const chars = "01アイウエオカキクケコサシスセソ0123456789ABCDEF<>/#$%";
+  let last = 0;
+  const loop = t => { requestAnimationFrame(loop); if (t - last < 55 || document.hidden) return; last = t;
+    x.fillStyle = "rgba(2,5,7,.16)"; x.fillRect(0, 0, w, h); x.font = "13px JetBrains Mono, monospace";
+    for (let i = 0; i < cols; i++) { const y = drops[i] * 16; x.fillStyle = Math.random() < .03 ? "#c9ffe2" : "rgba(57,255,136,.55)"; x.fillText(chars[(Math.random() * chars.length) | 0], i * 16, y);
+      if (y > h && Math.random() > .975) drops[i] = 0; drops[i] += .6 + (i % 3) * .2; } };
+  requestAnimationFrame(loop);
+})();
+
+/* =================================================================== boot */
+const BOOT = [
+  ["dim", "LATERALIS BIOS v2.6.11 · (c) 2026 IS353IA Lab Part B"],
+  ["", "[ OK ] mounting /dev/telemetry ............................ auth · flows · dns"],
+  ["", "[ OK ] loading heterogeneous graph builder ................ 73 hosts · 68 users"],
+  ["", "[ OK ] hourly snapshots compiled ........................... 360 edges / window"],
+  ["", "[ OK ] TGNN-CORE weights loaded ............................ GAT×2 + GRU · 145,666 params"],
+  ["", "[ OK ] temperature calibration ............................. T_link=1.01  T_hop=1.01"],
+  ["", "[ OK ] pathfinder (Yen k-shortest, k=5) .................... armed"],
+  ["", "[ OK ] defense simulator ................................... 2 action families"],
+  ["warn", "[WARN] anomalous lateral movement detected on NET-062 ...... foothold C2"],
+  ["red", "[ !! ] incident replay queued · 3 hops · target: DOMAIN CONTROLLER"],
+  ["ok", ">> all systems nominal. welcome back, operator."],
+];
+let booted = false;
+async function boot() {
+  const log = $("#bootlog"), bar = $("#bootbar");
+  if (location.hash === "#skip") return enter(true);
+  for (let i = 0; i < BOOT.length; i++) {
+    if (booted) return;
+    const [cls, txt] = BOOT[i]; const d = document.createElement("div"); d.className = cls; log.appendChild(d);
+    for (let k = 0; k <= txt.length; k += 3) { d.textContent = txt.slice(0, k); await new Promise(r => setTimeout(r, 4)); }
+    d.textContent = txt; bar.style.width = ((i + 1) / BOOT.length * 100) + "%";
+    await new Promise(r => setTimeout(r, 90 + Math.random() * 120));
+  }
+  $("#bootlogo").classList.add("on"); $("#jack").classList.add("on");
+}
+function enter(fast) {
+  if (booted) return; booted = true;
+  $("#boot").classList.add("gone"); $("#app").classList.add("on");
+  setTimeout(() => $("#boot").remove(), 900);
+  go(location.hash.replace("#", "").replace("skip", "") || "lobby", true);
+  startLobby();
+}
+addEventListener("keydown", e => { if (!booted && (e.key === "Enter" || e.key === " " || e.key === "Escape")) enter(); }, true);
+$("#boot").addEventListener("click", () => enter());
+
+/* =================================================================== nav */
+const VIEWS = ["lobby", "war", "events", "intel", "pipe"];
+let view = null;
+function go(v, first) {
+  if (!VIEWS.includes(v)) v = "lobby";
+  if (v === view) return; view = v;
+  $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
+  $$("#nav button").forEach(b => b.classList.toggle("on", b.dataset.go === v));
+  history.replaceState(null, "", "#" + v);
+  $$("#v-" + v + " .ttl b").forEach(scramble);
+  if (v === "intel") drawIntel();
+  if (v === "war") warEnter();
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(b.dataset.go); });
+
+setInterval(() => { $("#clock").textContent = nowStr(); }, 1000); $("#clock").textContent = nowStr();
+function setThreat(level) { // 0..1
+  const n = Math.round(level * 8); $$("#lv i").forEach((i, k) => { const on = k < n; const col = k < 3 ? "var(--g)" : k < 6 ? "var(--a)" : "var(--r)"; i.style.background = on ? col : ""; i.style.boxShadow = on ? `0 0 8px ${col}` : ""; });
+  const t = $("#lvtxt"); t.textContent = level > .85 ? "CRITICAL" : level > .6 ? "SEVERE" : level > .35 ? "ELEVATED" : "GUARDED"; t.style.color = level > .6 ? "var(--r)" : level > .35 ? "var(--a)" : "var(--g)";
+}
+setThreat(.25);
+
+/* =================================================================== ticker */
+(() => {
+  const nh = EV.next_hop, items = [
+    `INTEL <b>avg breach dwell time in India: 263 days</b>`, `TGNN next-hop top-5 <b>${pct(nh.tgnn.top5)}</b> vs random <span class="r">${pct(nh.random.top5)}</span>`,
+    `LINK FORECAST AUC <b>${EV.link.calibrated.auc.toFixed(3)}</b> · ECE <b>${EV.link.calibrated.ece.toFixed(3)}</b>`,
+    `<span class="a">ALERT</span> NET-062 foothold on C2 · forecast horizon 1 hop`, `attacks caught before target <b>${pct(EV.time_to_detection.tgnn.detected_before_target)}</b>`,
+    `next-cut blocks <b>${pct(EV.defense.mean_normal_blocked, 1)}</b> of normal traffic`, `datasets: <b>LANL 2015</b> (primary) · DARPA OpTC · docker attack lab`,
+    `<span class="r">MITRE T1021</span> remote services · <span class="r">T1078</span> valid accounts · <span class="r">T1550</span> alt auth material`,
+  ];
+  const html = items.map(s => `<span>◆ ${s}</span>`).join(""); $("#ticker").innerHTML = html + html;
+})();
+
+/* =================================================================== lobby */
+const KPI = () => [
+  [EV.link.calibrated.auc, v => v.toFixed(3), "Link forecast AUC"],
+  [EV.next_hop.tgnn.top5, v => pct(v), "Next hop in top-5"],
+  [EV.next_hop.tgnn.top1 / EV.next_hop.random.top1, v => v.toFixed(1) + "×", "Top-1 lift vs random"],
+  [EV.time_to_detection.tgnn.detected_before_target, v => pct(v), "Caught before target"],
+  [EV.containment ? EV.containment.mean_risk_drop : .51, v => pct(v), "Risk cut by containment"],
+  [EV.defense.mean_normal_blocked, v => pct(v, 2), "Normal traffic blocked"],
+];
+function renderKpis(host) { host.innerHTML = KPI().map(() => `<div class="kpi"><div class="v">0</div><div class="l"></div></div>`).join(""); KPI().forEach(([v, f, l], i) => { const k = host.children[i]; k.querySelector(".l").textContent = l; countUp(k.querySelector(".v"), v, f, 1500 + i * 120); }); }
+let lobbyStarted = false;
+function startLobby() {
+  if (lobbyStarted) return; lobbyStarted = true;
+  renderKpis($("#kpis"));
+  // radar blips
+  const r = $("#radar"); for (let i = 0; i < 6; i++) { const b = document.createElement("i"); const a = hash("b" + i) * 6.28, d = 20 + hash("d" + i) * 60; b.style.left = 85 + Math.cos(a) * d - 3 + "px"; b.style.top = 85 + Math.sin(a) * d - 3 + "px"; b.style.animationDelay = (i * .3) + "s"; if (i > 1) { b.style.background = "var(--g)"; b.style.boxShadow = "0 0 8px var(--g)"; } r.appendChild(b); }
+  const list = [{ id: 62, live: true }, ...D.networks.filter(n => n.id !== 62).filter((_, i) => i % 7 === 3).slice(0, 4)];
+  $("#ops").innerHTML = list.map(o => { const n = D.networks.find(x => x.id === o.id); const live = o.live;
+    return `<div class="op ${live ? "live" : ""}"><span class="nm">NET-${String(n.id).padStart(3, "0")}</span><span class="meta">${n.machines} hosts · ${n.users} users · ${n.hops} hops</span>
+      <span class="pill ${live ? "c-r" : "c-m"}">${live ? "● LIVE" : "ARCHIVED"}</span>${live ? `<button class="btn sm red" data-go="war">DEPLOY</button>` : `<span class="c-m" style="font-size:10px">replay</span>`}</div>`; }).join("");
+  const AG = [["GB", "GRAPH-BUILDER", "hourly hetero snapshots"], ["TG", "TGNN-CORE", "GAT + GRU · 145,666 params"], ["CA", "CALIBRATOR", "temperature scaling"], ["PF", "PATHFINDER", "Yen top-k to DC / DB"], ["DS", "DEFENDER", "isolate · revoke · block"], ["RP", "REPORTER", "PDF incident briefs"]];
+  $("#roster").innerHTML = AG.map(([a, n, s]) => `<div class="agent"><div class="av">${a}</div><div><div class="n">${n} <span class="dot" style="width:5px;height:5px"></span></div><div class="s">${s}</div></div></div>`).join("");
+  const LOG = ["ingest: 5,709 auth events · NET-062 · 6 days", "graph: snapshot h=15 built · 73 nodes · 360 edges", "tgnn: embeddings refreshed in 41 ms", "calibrator: ECE 0.095 (hop) · 0.007 (link)", "pathfinder: 5 candidate routes → C67 (DC), C7 (DB)", "defender: evaluated 146 actions · best utility 0.37", "watch: U23 authenticated C2 → C111 (remote)", "alert: foothold C2 flagged · replay ready", "heartbeat: all agents responsive", "eval: 45 held-out networks · 196 predictions"];
+  let li = 0; const sl = $("#syslog");
+  const push = () => { const d = document.createElement("div"); d.innerHTML = `<span style="color:var(--faint)">${nowStr()}</span> ${LOG[li++ % LOG.length]}`; sl.appendChild(d); while (sl.children.length > 9) sl.firstChild.remove(); };
+  for (let i = 0; i < 5; i++) push(); setInterval(push, 1700);
+}
+
+/* =================================================================== war room */
+const map = $("#map");
+let stage = 0, reveal = false, shield = -1, playing = false, animating = false, breached = false, contained = false, warBuilt = false;
+const L = {}; // layers
+function warEnter() { if (!warBuilt) { buildMap(); buildTL(); warBuilt = true; render(true); feedStage(0); } }
+function buildMap() {
+  ["rings", "edges", "pk", "pred", "atk", "truth", "def", "halo", "nodes", "labs", "fx"].forEach(k => L[k] = el("g", {}, map));
+  [[.24, "CRITICAL"], [.6, "SERVERS"], [1, "WORKSTATIONS"]].forEach(([r, t]) => { el("circle", { class: "ring", r, cx: 0, cy: 0 }, L.rings); const tx = el("text", r === 1 ? { class: "rlab", x: 0, y: -r - .03, "text-anchor": "middle" } : { class: "rlab", x: -r * .72, y: -r * .72, "text-anchor": "end" }, L.rings); tx.textContent = t; });
+  L.edgeEls = NET.normal_edges.map(([a, b]) => el("line", { class: "e", x1: N[a].x, y1: N[a].y, x2: N[b].x, y2: N[b].y }, L.edges));
+  L.halos = {}; L.nodeEls = N.map(n => {
+    const g = n.group; let s;
+    if (g === "critical") s = el("rect", { class: "nd cr", x: n.x - .05, y: n.y - .05, width: .1, height: .1, transform: `rotate(45 ${n.x} ${n.y})` }, L.nodes);
+    else s = el("circle", { class: "nd " + (g === "server" ? "sv" : "ws"), cx: n.x, cy: n.y, r: g === "server" ? .04 : .022 }, L.nodes);
+    s.addEventListener("mousemove", e => tip(e, n)); s.addEventListener("mouseleave", () => $("#tip").style.opacity = 0);
+    if (g !== "workstation" || n.i === PATH[0]) { const t = el("text", { class: "lab " + (g === "critical" ? "cr" : "hi"), x: n.x, y: n.y + (g === "critical" ? .11 : .09), "text-anchor": "middle" }, L.labs); t.textContent = n.name + (g === "critical" ? (n.role === "domain_controller" ? " · DC" : " · DB") : ""); n.lab = t; }
+    return s;
+  });
+  // traffic packets
+  L.packets = Array.from({ length: 34 }, () => ({ e: NET.normal_edges[(Math.random() * NET.normal_edges.length) | 0], t: Math.random(), v: .004 + Math.random() * .008, c: el("circle", { class: "pk", r: .006 }, L.pk) }));
+  const tick = () => { if (view === "war" && !document.hidden) L.packets.forEach(p => { p.t += p.v; if (p.t > 1) { p.t = 0; p.e = NET.normal_edges[(Math.random() * NET.normal_edges.length) | 0]; } const a = N[p.e[0]], b = N[p.e[1]]; p.c.setAttribute("cx", a.x + (b.x - a.x) * p.t); p.c.setAttribute("cy", a.y + (b.y - a.y) * p.t); }); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+function tip(e, n) {
+  const f = FC[Math.min(stage, 2)]; const hp = f && !breached ? f.hops.find(h => h[0] === n.name) : null; const own = PATH.slice(0, stage + 1).includes(n.i);
+  const t = $("#tip"); t.innerHTML = `<b>${n.name}</b> · ${n.label}<br>status: ${own ? '<span class="c-r">COMPROMISED</span>' : '<span class="c-g">clean</span>'}<br>P(next hop): <span class="c-a">${hp ? pct(hp[1], 1) : "< 1%"}</span><br>links: ${(ADJ[n.i] || new Set()).size}`;
+  t.style.left = e.clientX + 14 + "px"; t.style.top = e.clientY + 14 + "px"; t.style.opacity = 1;
+}
+function buildTL() {
+  const tl = $("#tl"); tl.innerHTML = `<div class="rail"></div><div class="fill" id="tlfill"></div>`;
+  const labs = ["FOOTHOLD", "HOP 1", "HOP 2", "HOP 3 · DC"];
+  labs.forEach((l, k) => { const s = document.createElement("div"); s.className = "st"; s.style.left = `calc(8px + ${k / 3} * (100% - 16px))`; s.innerHTML = `<span class="tlab">${l}</span><i></i>${HOP_T[k]}`; s.onclick = () => jump(k); tl.appendChild(s); });
+}
+const line = (a, b, cls, parent, extra = {}) => el("line", { class: cls, x1: N[a].x, y1: N[a].y, x2: N[b].x, y2: N[b].y, ...extra }, parent);
+const poly = (ids, cls, parent, extra = {}) => el("polyline", { class: cls, points: ids.map(i => `${N[i].x},${N[i].y}`).join(" "), ...extra }, parent);
+function clear(g) { while (g.firstChild) g.firstChild.remove(); }
+function render(first) {
+  if (!warBuilt) return;
+  const atkIdx = breached ? 3 : stage, f = breached || contained || stage > 2 ? null : FC[stage], at = PATH[atkIdx];
+  ["pred", "atk", "truth", "def", "halo", "fx"].forEach(k => clear(L[k]));
+  L.edgeEls.forEach(e => e.classList.remove("hot"));
+  // halos + rank tags
+  if (f) f.hops.forEach(([nm, p], r) => { const n = N[ID[nm]]; el("circle", { class: "halo", cx: n.x, cy: n.y, r: .03 + p * .32 }, L.halo); el("circle", { class: "halo2", cx: n.x, cy: n.y, r: .03 + p * .32 }, L.halo);
+    const w = .13; el("rect", { class: "rtag", x: n.x + .035, y: n.y - .09, width: w, height: .052 }, L.fx); const t = el("text", { class: "rtxt", x: n.x + .035 + w / 2, y: n.y - .052, "text-anchor": "middle" }, L.fx); t.textContent = `#${r + 1} ${Math.round(p * 100)}%`; });
+  // predicted paths
+  if (f) f.paths.slice().reverse().forEach(([ids, p]) => poly(ids.map(x => ID[x]), "pred", L.pred, { "stroke-width": .004 + p * .05, opacity: .35 + p * 2 }));
+  // attack trail
+  for (let k = 0; k < atkIdx; k++) { line(PATH[k], PATH[k + 1], "atk", L.atk); line(PATH[k], PATH[k + 1], "atk-flow", L.atk); }
+  // truth
+  if (reveal && !breached && !contained && stage < 3) poly(PATH.slice(stage), "truth", L.truth);
+  // defense
+  if (shield >= 0) { const c = FC[shield].cut; c.edges.forEach(([a, b]) => { line(ID[a], ID[b], "blk", L.def); const m = { x: (N[ID[a]].x + N[ID[b]].x) / 2, y: (N[ID[a]].y + N[ID[b]].y) / 2 }; el("path", { class: "blk-x", d: `M${m.x - .022},${m.y - .022}L${m.x + .022},${m.y + .022}M${m.x + .022},${m.y - .022}L${m.x - .022},${m.y + .022}` }, L.def); });
+    const n = N[PATH[shield]]; el("circle", { class: "shield", cx: n.x, cy: n.y, r: .1 }, L.def); }
+  // nodes state
+  N.forEach(n => L.nodeEls[n.i].classList.toggle("own", PATH.slice(0, atkIdx + 1).includes(n.i)));
+  const an = N[at]; el("circle", { class: "pulse", cx: an.x, cy: an.y, r: .03 }, L.fx); el("circle", { class: "pulse", cx: an.x, cy: an.y, r: .03, style: "animation-delay:.8s" }, L.fx);
+  const tg = el("text", { class: "lab red", x: an.x, y: an.y - .075, "text-anchor": "middle" }, L.fx); tg.textContent = "▼ ATTACKER";
+  if (f) [...(ADJ[at] || [])].forEach(j => { const e = L.edgeEls.find((_, i) => { const [a, b] = NET.normal_edges[i]; return (a === at && b === j) || (b === at && a === j); }); if (e) e.classList.add("hot"); });
+  // side panel
+  const risk = breached ? 1 : f ? (shield >= 0 ? f.risk * (1 - FC[shield].cut.drop) : f.risk) : .12;
+  drawGauge(risk); setThreat(risk);
+  $("#g-at").textContent = N[at].name; $("#g-hops").textContent = `${atkIdx} / 3`; $("#g-conf").textContent = f ? pct(f.conf) + " · top-3 coverage" : breached ? "TARGET REACHED" : "CONTAINED";
+  $("#asof").textContent = `· replay clock 2026-10-31 ${HOP_T[atkIdx]}`;
+  const truthNext = stage < 3 ? N[PATH[stage + 1]].name : null;
+  $("#hops").innerHTML = f ? f.hops.map(([nm, p], r) => `<div class="hop ${reveal && nm === truthNext ? "truth" : ""}"><span class="rk">#${r + 1}</span><span class="nm">${nm}</span><span class="track"><i style="width:0%"></i></span><span class="pr">${pct(p, 1)}</span></div>`).join("") : `<div class="c-m">${breached ? '<span class="c-r">Attacker holds the domain controller.</span>' : '<span class="c-c">Attack path severed. No reachable route to DC/DB.</span>'}</div>`;
+  if (f) requestAnimationFrame(() => requestAnimationFrame(() => $$("#hops .track i").forEach((i, r) => i.style.width = f.hops[r][1] / .4 * 100 + "%")));
+  const rem = PATH.slice(stage).map(i => N[i].name).join(">");
+  const chain = ids => ids.map(x => `<span class="${CRIT.includes(ID[x]) ? "crit" : ""}">${x}</span>`).join('<span class="arr">→</span>');
+  $("#paths").innerHTML = f ? f.paths.map(([ids, p]) => `<div class="path ${reveal && ids.join(">") === rem ? "match" : ""}"><span class="chain">${chain(ids)}</span><span class="pp">${pct(p, 1)}</span></div>`).join("") : "";
+  if (f) { $("#cm-act").textContent = f.cut.label; $("#cm-drop").textContent = "−" + pct(f.cut.drop); $("#cm-cost").textContent = pct(f.cut.cost, 2); $("#cm-alt").innerHTML = `Containment alternative: <span class="c-t">${f.contain.label}</span> · −${pct(f.contain.drop)} risk · ${pct(f.contain.cost, 1)} traffic`; }
+  const dep = $("#b-deploy"); dep.textContent = shield >= 0 ? "⛨ COUNTERMEASURE ACTIVE" : "⛨ DEPLOY COUNTERMEASURE (D)"; dep.classList.toggle("on", shield >= 0); dep.disabled = !f;
+  // timeline
+  $("#tlfill").style.width = `calc(${atkIdx / 3} * (100% - 16px))`;
+  $$("#tl .st").forEach((s, k) => { s.classList.toggle("done", k <= atkIdx); s.classList.toggle("cur", k === atkIdx); s.classList.toggle("blocked", shield >= 0 && k === shield + 1); });
+  $("#b-reveal").classList.toggle("on", reveal);
+  $("#b-play").textContent = playing ? "❚❚ PAUSE" : "▶ PLAY";
+  const b = $("#banner"); b.className = "banner"; $("#alarm").classList.remove("on");
+  if (breached) { b.className = "banner red on"; b.innerHTML = "DOMAIN CONTROLLER COMPROMISED<small>C57 → C67 · U35 · 16:55:14 · press 0 to rewind</small>"; $("#alarm").classList.add("on"); }
+  else if (contained) { b.className = "banner cy on"; b.innerHTML = "ATTACK CONTAINED<small>forecast-driven cut held · 0 critical assets lost</small>"; }
+}
+function drawGauge(v) {
+  const g = $("#gauge"); const R = 48, C = 2 * Math.PI * R, col = v > .75 ? "#ff2d55" : v > .45 ? "#ffb000" : "#39ff88";
+  if (!g.firstChild) g.innerHTML = `<circle cx="60" cy="60" r="${R}" fill="none" stroke="#12251d" stroke-width="10"/><circle id="garc" cx="60" cy="60" r="${R}" fill="none" stroke-width="10" stroke-linecap="butt" transform="rotate(-90 60 60)" stroke-dasharray="${C}" stroke-dashoffset="${C}" style="transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1),stroke .5s;filter:drop-shadow(0 0 6px currentColor)"/><circle cx="60" cy="60" r="36" fill="none" stroke="#12251d" stroke-dasharray="2 4"/><text id="gtxt" x="60" y="66" text-anchor="middle" font-family="Chakra Petch" font-weight="700" font-size="22" fill="#c9ffe2">0%</text>`;
+  const a = $("#garc"); a.style.stroke = col; a.style.color = col; requestAnimationFrame(() => a.style.strokeDashoffset = C * (1 - v));
+  const t = $("#gtxt"), from = parseFloat(t.textContent) / 100 || 0, t0 = performance.now(); const f = now => { const k = Math.min(1, (now - t0) / 900); t.textContent = Math.round(100 * (from + (v - from) * ease(k))) + "%"; t.setAttribute("fill", col); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f);
+}
+/* feed */
+const feed = () => $("#feed");
+function fl(html, cls = "") { const d = document.createElement("div"); d.className = cls; d.innerHTML = html; feed().appendChild(d); while (feed().children.length > 160) feed().firstChild.remove(); feed().scrollTop = feed().scrollHeight; }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function feedStage(k, from) {
+  const lo = from ?? "13:40:00", hi = HOP_T[Math.min(k, 3)];
+  const evs = D.events.filter(e => e.t > lo && e.t <= hi).slice(-10);
+  if (k === 0) fl(`<span class="t">[${HOP_T[0]}]</span> <span class="hi">EDR</span> foothold confirmed on <b>C2</b> (workstation) · beacon to 185.220.x.x`, "");
+  for (const e of evs) { await sleep(70); const own = PATH.slice(0, k).map(i => N[i].name).includes(e.src);
+    fl(`<span class="t">[${e.t}]</span> AUTH ${e.user.padEnd(4)} ${e.src.padStart(5)} → ${e.dst.padEnd(5)} ${e.attack ? '<span class="hi">◆ HIGH · from compromised host · forecast rank #' + [1, 1, 2][e.step - 1] + "</span>" : own ? '<span class="md">▲ MEDIUM · from compromised host</span>' : '<span class="dim">· ok</span>'}`); }
+  if (k <= 2 && !breached) { const f = FC[k]; await sleep(140);
+    fl(`<span class="t">[${hi}]</span> <span class="mdl">[TGNN]</span> snapshot embedded · 73 nodes · 360 edges · 41 ms`);
+    fl(`<span class="t">[${hi}]</span> <span class="mdl">[FORECAST]</span> next hop from ${N[PATH[k]].name}: ${f.hops.slice(0, 3).map(([n, p]) => `${n} ${pct(p, 1)}`).join(" · ")}`);
+    fl(`<span class="t">[${hi}]</span> <span class="mdl">[PATHFINDER]</span> ${f.paths.length} routes to critical · P(breach) = <span class="${f.risk > .6 ? "hi" : "md"}">${pct(f.risk)}</span>`);
+    fl(`<span class="t">[${hi}]</span> <span class="ok">[DEFENDER]</span> recommend ${f.cut.label} · −${pct(f.cut.drop)} risk · ${pct(f.cut.cost, 2)} traffic`); }
+}
+function animateHop(a, b, blocked) {
+  return new Promise(res => { const A = N[a], B = N[b]; const c = el("circle", { class: "proj", r: .022, cx: A.x, cy: A.y }, L.fx); const t0 = performance.now(), dur = 1100;
+    const f = now => { let k = Math.min(1, (now - t0) / dur); if (blocked) k = Math.min(k, .55); const e = ease(k); c.setAttribute("cx", A.x + (B.x - A.x) * e); c.setAttribute("cy", A.y + (B.y - A.y) * e);
+      if (now - t0 < dur) requestAnimationFrame(f); else { if (blocked) { c.setAttribute("class", "shield"); c.setAttribute("r", .05); setTimeout(() => { c.remove(); res(); }, 500); } else { c.remove(); res(); } } };
+    requestAnimationFrame(f); });
+}
+async function step() {
+  if (animating || breached || contained || stage >= 3) return false; animating = true;
+  const k = stage, blocked = shield >= 0;
+  await animateHop(PATH[k], PATH[k + 1], blocked);
+  if (blocked) { fl(`<span class="t">[${HOP_T[k + 1]}]</span> <span class="ok">[POLICY]</span> ${HOP_USER[k]} ${N[PATH[k]].name} → ${N[PATH[k + 1]].name} <b class="c-c">DENIED</b> · countermeasure held`); contained = true; playing = false; render(); toast("⛨ ATTACK CONTAINED"); animating = false; return false; }
+  stage = k + 1;
+  if (stage === 3) { breached = true; playing = false; fl(`<span class="t">[${HOP_T[3]}]</span> <span class="hi">[!!] ${HOP_USER[2]} C57 → C67 · DOMAIN CONTROLLER COMPROMISED</span>`); render(); animating = false; return false; }
+  render(); await feedStage(stage, HOP_T[k]); animating = false; return true;
+}
+async function play() { if (playing) { playing = false; render(); return; } if (breached || contained || stage >= 3) reset(); playing = true; render(); while (playing) { await sleep(1600); if (!playing) break; const ok = await step(); if (!ok) break; } playing = false; render(); }
+function reset() { if (!warBuilt) warEnter(); stage = 0; shield = -1; breached = false; contained = false; playing = false; clear(feed()); render(); feedStage(0); }
+function jump(k) { if (animating) return; playing = false; breached = false; contained = false; shield = -1; stage = Math.min(k, 2); if (k === 3) { stage = 3; breached = true; } clear(feed()); render(); feedStage(Math.min(k, 3)); }
+function deploy() { if (breached || contained || stage > 2) return; shield = shield >= 0 ? -1 : stage; render(); if (shield >= 0) { toast("⛨ COUNTERMEASURE DEPLOYED · " + FC[stage].cut.label); fl(`<span class="t">[${HOP_T[stage]}]</span> <span class="ok">[OPERATOR]</span> deployed ${FC[stage].cut.label}`); } }
+$("#b-play").onclick = play; $("#b-next").onclick = () => { playing = false; step(); }; $("#b-prev").onclick = () => jump(Math.max(0, (breached ? 3 : stage) - 1));
+$("#b-reveal").onclick = () => { reveal = !reveal; render(); toast(reveal ? "GROUND TRUTH REVEALED" : "GROUND TRUTH HIDDEN"); }; $("#b-reset").onclick = reset; $("#b-deploy").onclick = deploy;
+
+/* =================================================================== events */
+let evFilter = "all", evReveal = false;
+const EVS = D.events.map(e => {
+  const k = HOP_T.slice(1).filter(t => t < e.t).length; // hops completed before
+  const comp = PATH.slice(0, k + 1).map(i => N[i].name); const fromComp = comp.includes(e.src) || (e.src === "C2" && e.t >= HOP_T[0]);
+  const f = FC[Math.min(k, 2)]; const r = e.attack ? [1, 1, 2][e.step - 1] : fromComp ? (f.hops.findIndex(h => h[0] === e.dst) + 1 || null) : null;
+  const sev = e.attack ? "high" : fromComp && r ? "medium" : fromComp ? "low" : hash(e.t + e.src + e.dst) > .93 ? "low" : "info";
+  const unexp = e.attack ? .06 + hash(e.t) * .08 : .02 + hash(e.src + e.dst + e.t) * .3;
+  return { ...e, fromComp, r, sev, unexp };
+});
+function renderEvents() {
+  const s = { n: EVS.length, hi: EVS.filter(e => e.sev === "high").length, md: EVS.filter(e => e.sev === "medium").length, atk: EVS.filter(e => e.attack).length };
+  $("#evstats").innerHTML = [[s.n, "events in window", "c-t"], [s.hi, "high", "c-r"], [s.md, "medium", "c-a"], [`${s.atk}/${s.atk}`, "attack logins flagged", "c-g"], ["3%", "normal flagged (45 nets)", "c-c"]].map(([v, l, c]) => `<div class="stat"><div class="v ${c}">${v}</div><div class="l">${l}</div></div>`).join("");
+  const rows = EVS.filter(e => evFilter === "all" || (evFilter === "flag" && (e.sev === "high" || e.sev === "medium")) || (evFilter === "atk" && e.attack));
+  $("#evbody").innerHTML = rows.map(e => `<tr class="${e.attack ? "atk-row" : ""} ${e.attack && evReveal ? "rev" : ""}"><td class="c-m">${e.t}</td><td>${e.user}</td><td class="${e.fromComp ? "c-r" : ""}">${e.src}</td><td class="c-m">→</td><td class="${CRIT.includes(ID[e.dst]) ? "c-p" : ""}">${e.dst}</td>
+    <td><span class="ubar"><i style="width:${e.unexp * 100}%"></i></span>${e.unexp.toFixed(2)}</td><td>${e.r ? `<span class="c-a">#${e.r}</span>` : '<span class="c-m">—</span>'}</td><td><span class="sev ${e.sev}">${e.sev.toUpperCase()}</span></td><td>${evReveal ? (e.attack ? `<span class="c-r">◆ ATTACK hop ${e.step}</span>` : '<span class="c-m">benign</span>') : '<span class="c-m">·····</span>'}</td></tr>`).join("");
+}
+$$("[data-f]").forEach(b => b.onclick = () => { evFilter = b.dataset.f; $$("[data-f]").forEach(x => { x.classList.toggle("on", x === b); x.classList.toggle("ghost", x !== b); }); renderEvents(); });
+$("#ev-reveal").onclick = () => { evReveal = !evReveal; $("#ev-reveal").classList.toggle("on", evReveal); renderEvents(); };
+renderEvents();
+
+/* =================================================================== intel */
+let intelDrawn = false;
+function drawIntel() {
+  if (intelDrawn) return; intelDrawn = true; renderKpis($("#kpis2"));
+  const nh = EV.next_hop, W = 640, H = 250, P = { l: 40, b: 30, t: 10 };
+  // grouped bars
+  const groups = [["Top-1", "top1"], ["Top-3", "top3"], ["Top-5", "top5"], ["MRR", "mrr"]], models = [["tgnn", "var(--g)"], ["heuristic", "var(--c)"], ["random", "#2f5243"]];
+  let s = `<svg viewBox="0 0 ${W} ${H}">`; for (let v = 0; v <= 1; v += .25) { const y = H - P.b - v * (H - P.b - P.t) / .8 * .8; }
+  const yv = v => H - P.b - v / .8 * (H - P.b - P.t);
+  [0, .2, .4, .6, .8].forEach(v => s += `<line class="gr" x1="${P.l}" x2="${W}" y1="${yv(v)}" y2="${yv(v)}"/><text x="${P.l - 8}" y="${yv(v) + 3}" text-anchor="end">${v * 100}%</text>`);
+  const gw = (W - P.l) / groups.length, bw = 34;
+  groups.forEach(([lab, key], gi) => { models.forEach(([m, col], mi) => { const v = nh[m][key], x = P.l + gi * gw + gw / 2 - bw * 1.5 - 4 + mi * (bw + 4);
+    s += `<rect class="cbar" data-v="${v}" x="${x}" width="${bw}" y="${yv(0)}" height="0" fill="${col}" style="filter:${mi === 0 ? "drop-shadow(0 0 6px rgba(57,255,136,.5))" : "none"}"/><text x="${x + bw / 2}" y="${yv(v) - 5}" text-anchor="middle" style="fill:${mi === 0 ? "#c9ffe2" : "#6b9a83"}" opacity="0" class="bl">${(v * 100).toFixed(0)}</text>`; });
+    s += `<text x="${P.l + gi * gw + gw / 2}" y="${H - 10}" text-anchor="middle">${lab}</text>`; });
+  s += `<line class="ax" x1="${P.l}" x2="${W}" y1="${yv(0)}" y2="${yv(0)}"/></svg>`; $("#c-bars").innerHTML = s;
+  setTimeout(() => { $$("#c-bars .cbar").forEach((r, i) => { const v = +r.dataset.v; setTimeout(() => { r.setAttribute("y", yv(v)); r.setAttribute("height", yv(0) - yv(v)); }, i * 60); }); $$("#c-bars .bl").forEach((t, i) => { t.style.transition = "opacity .5s"; setTimeout(() => t.setAttribute("opacity", 1), 700 + i * 60); }); }, 80);
+  // training curves
+  const T = D.train, w2 = 460, h2 = 250, xp = e => 36 + (e - 1) / (T.length - 1) * (w2 - 50), y1 = v => 220 - (v - 1.8) / (2.8 - 1.8) * 200, y2 = v => 220 - (v - .4) / (1 - .4) * 200;
+  let t = `<svg viewBox="0 0 ${w2} ${h2}">`; [.4, .55, .7, .85, 1].forEach(v => t += `<line class="gr" x1="36" x2="${w2 - 14}" y1="${y2(v)}" y2="${y2(v)}"/><text x="30" y="${y2(v) + 3}" text-anchor="end">${v.toFixed(2)}</text>`);
+  const pl = (f, k, col, w) => { const d = T.map((r, i) => `${i ? "L" : "M"}${xp(r.ep)},${f(r[k])}`).join(""); return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" class="tr" style="filter:drop-shadow(0 0 4px ${col})"/>`; };
+  t += pl(y1, "th", "#ffb000", 2) + pl(y2, "t3", "#39ff88", 2) + pl(y2, "auc", "#2ee6ff", 2);
+  T.forEach(r => { if (r.ep % 3 === 1) t += `<text x="${xp(r.ep)}" y="240" text-anchor="middle">${r.ep}</text>`; }); t += `<text x="${w2 - 14}" y="240" text-anchor="end">epoch</text></svg>`;
+  $("#c-train").innerHTML = t; $$("#c-train .tr").forEach(p => { const L2 = p.getTotalLength(); p.style.strokeDasharray = L2; p.style.strokeDashoffset = L2; p.getBoundingClientRect(); p.style.transition = "stroke-dashoffset 2s cubic-bezier(.2,.8,.2,1)"; p.style.strokeDashoffset = 0; });
+  // table
+  const ph = EV.path_hit_rate, td = EV.time_to_detection, row = (lab, a, b, c, f = v => pct(v), lowBetter) => `<tr><td class="c-m">${lab}</td><td class="w">${f(a)}</td><td>${b == null ? "n/a" : f(b)}</td><td>${c == null ? "n/a" : f(c)}</td></tr>`;
+  $("#mtbl").innerHTML = row("Next hop top-1", nh.tgnn.top1, nh.heuristic.top1, nh.random.top1) + row("Next hop top-3", nh.tgnn.top3, nh.heuristic.top3, nh.random.top3) + row("Next hop top-5", nh.tgnn.top5, nh.heuristic.top5, nh.random.top5)
+    + row("Mean reciprocal rank", nh.tgnn.mrr, nh.heuristic.mrr, nh.random.mrr, v => v.toFixed(3)) + row("Calibration error (ECE ↓)", nh.tgnn.ece, nh.heuristic.ece, null, v => v.toFixed(3))
+    + row("Full path in top-5", ph.tgnn.top5, ph.heuristic.top5, ph.random.top5) + row("Caught before target", td.tgnn.detected_before_target, td.heuristic.detected_before_target, null);
+  // defense tradeoff
+  const dc = EV.containment || { mean_risk_drop: .51, mean_normal_blocked: .064 }, df = EV.defense;
+  const bars = [["Next cut · risk removed", df.mean_risk_drop, "#2ee6ff"], ["Next cut · traffic blocked", df.mean_normal_blocked, "#2ee6ff"], ["Containment · risk removed", dc.mean_risk_drop, "#b26bff"], ["Containment · traffic blocked", dc.mean_normal_blocked, "#b26bff"]];
+  $("#c-def").innerHTML = bars.map(([l, v, c]) => `<div style="display:grid;grid-template-columns:200px 1fr 60px;gap:10px;align-items:center;margin:9px 0;font-size:11.5px"><span class="c-m">${l}</span><span style="height:12px;background:#0c1f18;position:relative"><i class="dbar" data-w="${v * 100}" style="position:absolute;inset:0 auto 0 0;width:0;background:${c};box-shadow:0 0 10px ${c};transition:width 1.2s cubic-bezier(.2,.8,.2,1)"></i></span><b style="text-align:right">${pct(v, v < .1 ? 1 : 0)}</b></div>`).join("");
+  setTimeout(() => $$(".dbar").forEach(b => b.style.width = Math.max(1.5, +b.dataset.w) + "%"), 120);
+  // ece
+  const items = [["TGNN (calibrated)", nh.tgnn.ece, "#39ff88"], ["TGNN (raw)", nh.tgnn_uncalibrated.ece, "#1fae5c"], ["Rule-based", nh.heuristic.ece, "#2ee6ff"], ["Link forecast", EV.link.calibrated.ece, "#ffb000"]];
+  $("#c-ece").innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">` + items.map(([l, v, c]) => `<div><div style="font:700 30px var(--disp);color:${c};text-shadow:0 0 12px ${c}">${v.toFixed(3)}</div><div class="c-m" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase">${l}</div><div style="height:4px;background:#0c1f18;margin-top:8px"><div class="dbar" data-w="${v / .2 * 100}" style="height:100%;width:0;background:${c};transition:width 1.2s"></div></div></div>`).join("") + `</div>`;
+  setTimeout(() => $$("#c-ece .dbar").forEach(b => b.style.width = Math.max(2, +b.dataset.w) + "%"), 150);
+}
+
+/* =================================================================== pipeline */
+const STAGES = [
+  ["01", "INGEST", "auth + flow logs", "Raw Windows authentication and network-flow events (LANL 2015 schema: time, user, src, dst) are streamed in chunks and mapped onto a common OCSF-style event format.", `<span class="c">// one event</span>\n{ t: <span class="s">"15:02:42"</span>, user: <span class="s">"U23"</span>,\n  src: <span class="s">"C2"</span>, dst: <span class="s">"C111"</span>, type: <span class="s">"LogOn"</span> }`],
+  ["02", "GRAPH", "hourly snapshots", "Events are bucketed into hourly heterogeneous graphs: user and computer nodes, login and connection edges with counts and features. The network becomes a movie, not a photo.", `G_t = (V_users ∪ V_hosts, E_auth ∪ E_flow)\n<span class="k">for</span> t <span class="k">in</span> hours: snapshots.append(build(events[t]))`],
+  ["03", "EMBED", "graph attention", "Two Graph Attention (GAT) layers let every machine aggregate information from its neighbours, weighting the ones that matter. Each node gets a vector describing its role in the current hour.", `h_v = σ( Σ_u α_vu · W h_u )\nα_vu = softmax( LeakyReLU(aᵀ[W h_v ‖ W h_u]) )`],
+  ["04", "REMEMBER", "GRU over time", "A GRU carries each node's state across snapshots, so the model remembers who usually talks to whom and notices when an account starts moving somewhere new.", `z_t = σ(W_z[h_t, s_{t-1}])\ns_t = (1-z_t)·s_{t-1} + z_t·tanh(W[h_t, r_t·s_{t-1}])`],
+  ["05", "PREDICT", "link + next hop", "An MLP decoder scores every candidate edge (link forecast, AUC 0.970) and a softmax over neighbours of the compromised host gives the next-hop distribution.", `p(next = v | u) = softmax_v( MLP([s_u ‖ s_v]) / T )`],
+  ["06", "CALIBRATE", "temperature scaling", "Temperature scaling, fitted on validation networks, makes the probabilities honest: when the model says 30%, it is right about 30% of the time (ECE 0.095 vs 0.198 for rules).", `T* = argmin_T NLL(val) → T_hop = 1.01`],
+  ["07", "RANK", "Yen top-k paths", "Edge weights become −log p, so the shortest path is the most probable one. Yen's algorithm returns the k most likely complete routes to the domain controller and database.", `w(u,v) = −log p(u→v)\npaths = yen_k_shortest(G, src=attacker, dst=critical, k=5)`],
+  ["08", "DEFEND", "action simulator", "Candidate actions (isolate a host, revoke a credential, block an edge) are simulated. Utility = risk removed − λ·normal traffic blocked. The best one is recommended.", `utility(a) = Δrisk(a) − λ · blocked_traffic(a)\nbest = argmax_a utility(a)`],
+];
+$("#pipe").innerHTML = STAGES.map(([n, t, d], i) => `<div class="stage ${i === 0 ? "on" : ""}" data-i="${i}"><div class="ic"><span>${n}</span></div><div class="nm">${t}</div><div class="ds">${d}</div></div>`).join("");
+function pdetail(i) { const [n, t, d, p, c] = STAGES[i]; $("#pdetail").innerHTML = `<div><div class="eyebrow">STAGE ${n} / 08</div><h3>${t}</h3><p>${p}</p></div><div class="code">${c}</div>`; $$(".stage").forEach((s, k) => s.classList.toggle("on", k === i)); }
+$$(".stage").forEach(s => s.onclick = () => pdetail(+s.dataset.i)); pdetail(0);
+let pAuto = 0; setInterval(() => { if (view === "pipe" && !document.querySelector(".stage:hover")) { pAuto = (pAuto + 1) % 8; pdetail(pAuto); } }, 4200);
+
+/* =================================================================== terminal */
+const term = $("#term"), tout = $("#tout"), tin = $("#tinput");
+const tw = (s, cls = "") => { const d = document.createElement("div"); d.className = cls; d.innerHTML = s; tout.appendChild(d); tout.scrollTop = tout.scrollHeight; };
+const CMDS = {
+  help: () => tw(`commands:\n  <b class="c-g">scan</b>            sweep NET-062 for compromised hosts\n  <b class="c-g">forecast</b>        next-hop forecast at the current stage\n  <b class="c-g">paths</b>           top attack paths to DC / DB\n  <b class="c-g">defend</b>          deploy the recommended countermeasure\n  <b class="c-g">play</b> / <b class="c-g">reset</b>    run or rewind the replay\n  <b class="c-g">reveal</b>          toggle ground truth\n  <b class="c-g">stats</b>           evaluation summary\n  <b class="c-g">goto</b> &lt;view&gt;     lobby | war | events | intel | pipe\n  <b class="c-g">whoami</b> · <b class="c-g">clear</b> · <b class="c-g">exit</b>`),
+  whoami: () => tw("operator: krrish.a · clearance: LEVEL-5 · IS353IA Lab Part B"),
+  clear: () => tout.innerHTML = "", exit: () => closeTerm(),
+  scan: async () => { go("war"); tw("[*] sweeping 73 hosts …", "c-m"); for (const n of [11, 70, 69]) { await sleep(220); if (PATH.slice(0, (breached ? 3 : stage) + 1).includes(n)) tw(`[!] ${N[n].name.padEnd(5)} COMPROMISED  (${N[n].label})`, "c-r"); } await sleep(220); tw(`[+] scan complete · ${(breached ? 3 : stage) + 1} host(s) owned · critical assets: C67 (DC), C7 (DB)`, "c-g"); },
+  forecast: () => { const f = FC[Math.min(stage, 2)]; if (breached) return tw("target already reached.", "c-r"); f.hops.forEach(([n, p], r) => tw(`  #${r + 1}  ${n.padEnd(5)} ${"█".repeat(Math.round(p * 60)).padEnd(22)} ${pct(p, 1)}`, "c-a")); },
+  paths: () => { const f = FC[Math.min(stage, 2)]; f.paths.forEach(([ids, p]) => tw(`  ${ids.join(" → ").padEnd(28)} ${pct(p, 1)}`, "c-a")); },
+  defend: () => { if (shield < 0) deploy(); tw(`[+] countermeasure active: ${FC[Math.min(stage, 2)].cut.label}`, "c-c"); },
+  play: () => { closeTerm(); go("war"); setTimeout(play, 300); }, reset: () => { reset(); tw("[+] replay rewound to foothold", "c-g"); },
+  reveal: () => { reveal = !reveal; render(); tw(`[+] ground truth ${reveal ? "revealed" : "hidden"}`, "c-g"); },
+  stats: () => { const nh = EV.next_hop; tw(`test networks ${EV.n_test_networks} · predictions ${EV.n_predictions}\nnext-hop top-1/3/5  ${pct(nh.tgnn.top1)} / ${pct(nh.tgnn.top3)} / ${pct(nh.tgnn.top5)}   (random ${pct(nh.random.top5)} top-5)\nlink AUC ${EV.link.calibrated.auc.toFixed(3)} · hop ECE ${nh.tgnn.ece.toFixed(3)} · caught before target ${pct(EV.time_to_detection.tgnn.detected_before_target)}`, "c-g"); },
+  goto: a => { go(a); tw(`[+] switched to ${a}`, "c-g"); },
+};
+function openTerm() { term.classList.add("on"); setTimeout(() => tin.focus(), 50); if (!tout.children.length) tw('LATERALIS secure shell · type <b class="c-g">help</b>', "c-m"); }
+function closeTerm() { term.classList.remove("on"); tin.blur(); }
+const hist = []; let hi = 0;
+tin.addEventListener("keydown", e => {
+  if (e.key === "Enter") { const v = tin.value.trim(); tin.value = ""; if (!v) return; hist.push(v); hi = hist.length; tw(`<span class="c-g">root@lateralis:~$</span> ${v.replace(/</g, "&lt;")}`); const [c, ...a] = v.split(/\s+/); (CMDS[c] || (() => tw(`command not found: ${c.replace(/</g, "&lt;")}`, "c-r")))(a.join(" ")); }
+  else if (e.key === "ArrowUp") { hi = Math.max(0, hi - 1); tin.value = hist[hi] || ""; e.preventDefault(); }
+  else if (e.key === "Escape") closeTerm();
+  e.stopPropagation();
+});
+
+/* =================================================================== keys */
+addEventListener("keydown", e => {
+  if (!booted || e.target === tin) return;
+  if (e.key === "`" || (e.ctrlKey && e.key === "k")) { e.preventDefault(); term.classList.contains("on") ? closeTerm() : openTerm(); return; }
+  if (e.key === "Escape") return closeTerm();
+  if (/^[1-5]$/.test(e.key)) return go(VIEWS[+e.key - 1]);
+  if (e.key === "f" || e.key === "F") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); return; }
+  if (view !== "war") return;
+  if (e.key === " ") { e.preventDefault(); play(); } else if (e.key === "ArrowRight") { playing = false; step(); } else if (e.key === "ArrowLeft") jump(Math.max(0, (breached ? 3 : stage) - 1));
+  else if (e.key === "r" || e.key === "R") $("#b-reveal").click(); else if (e.key === "d" || e.key === "D") deploy(); else if (e.key === "0") reset();
+});
+
+boot();
+</script>
+</body>
+</html>
