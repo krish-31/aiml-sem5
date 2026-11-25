@@ -1,4 +1,4 @@
-"""Bake the presentation demo: demo/lateralis.html (one self-contained file, no backend).
+"""Bake the simulation page: demo/simulation.html (one self-contained file, no backend).
 
 Reads the committed NET-062 snapshot, its event log, the evaluation results and the
 training log, and injects them into demo/lobby.template.html.
@@ -41,5 +41,5 @@ data = {
 
 tpl = (HERE / "lobby.template.html").read_text(encoding="utf-8")
 out = tpl.replace("/*__DATA__*/null", json.dumps(data, separators=(",", ":")))
-(HERE / "lateralis.html").write_text(out, encoding="utf-8")
-print(f"wrote demo/lateralis.html  ({len(out) // 1024} KB, {len(events)} events, {len(train)} epochs)")
+(HERE / "simulation.html").write_text(out, encoding="utf-8")
+print(f"wrote demo/simulation.html  ({len(out) // 1024} KB, {len(events)} events, {len(train)} epochs)")
