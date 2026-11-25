@@ -29,6 +29,9 @@ uv pip install --python .venv/bin/python -e ".[dev,ml,app]"
 .venv/bin/python -m attackpath.api.server                     # 5. web app at http://127.0.0.1:8000
 .venv/bin/python -m pytest -q                                  # tests
 ```
+**Presentation demo (no install):** open [demo/lateralis.html](demo/lateralis.html) in a browser; the
+presenter script and controls are in [demo/PRESENTATION.md](demo/PRESENTATION.md).
+
 See [DEMO.md](DEMO.md) for a walkthrough script and **[docs/Lateralis_Manual.pdf](docs/Lateralis_Manual.pdf)** for the full user manual, tech stack, dataset and next steps. The exported dataset is in [dataset/](dataset/).
 
 ## Code map
