@@ -17,6 +17,10 @@ Open http://127.0.0.1:8000. It opens on the **Overview** page; the sun/moon butt
 Open the **Live console** once before the meeting so the demo network is warmed up.
 (The older Streamlit dashboard still works as a backup: `.venv/bin/streamlit run app/dashboard.py`.)
 
+**No time to set up?** Open [demo/index.html](demo/index.html) (website) and
+[demo/simulation.html](demo/simulation.html) (attack replay) with a double-click: no install, no
+server. Their script is in [demo/PRESENTATION.md](demo/PRESENTATION.md).
+
 ---
 
 ## The 5-minute demo
