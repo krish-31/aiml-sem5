@@ -29,6 +29,103 @@ phone, or with reduced motion on) it shows a still picture of the same network i
 
 Open `simulation.html#skip` to jump straight past the boot screen.
 
+## What every part of the simulation means
+
+**The one line to keep coming back to:** hackers don't go straight for the important server. They break
+into one PC and hop machine to machine with stolen passwords. Lateralis reads the logins, forecasts the
+next hop and recommends one fix that blocks it.
+
+### Top bar (every screen)
+
+| Item | Meaning |
+|---|---|
+| ← HOME | back to the website |
+| 01–05 tabs | the five screens (keys `1`–`5`) |
+| TGNN-CORE ONLINE | the temporal graph neural network is loaded |
+| THREAT meter | 8 bars, GUARDED → ELEVATED → SEVERE → CRITICAL: how close the attacker is to the critical servers; it follows the War Room |
+| Clock | live time, IST |
+| `` ` `` terminal | console with `help`, `scan`, `forecast`, `paths`, `defend`, `stats` |
+| Bottom ticker | headline facts: 263-day breach dwell time in India, model scores, MITRE T1021 / T1078 / T1550 |
+
+### 1. Lobby: what the project is
+
+| Element | Meaning |
+|---|---|
+| Headline and paragraph | the network as a graph that changes every hour: machines and users are nodes, logins are edges |
+| Six KPI tiles | the headline results from the real test run (explained under Model Intel) |
+| Active Operations | the 45 held-out networks the model never trained on |
+| Agent Roster | the pipeline modules: graph builder, temporal GNN, calibrator, pathfinder, defender |
+| System Log | the modules starting up |
+
+### 2. War Room: the replay of NET-062
+
+The map: green dots are workstations, cyan are servers, purple diamonds are the critical domain
+controller (it holds every password) and database, red is compromised, orange halos and lines are the
+forecast, a thick cyan line with an X is a blocked connection. The real attack is
+C2 → C111 → C57 → C67 (the domain controller).
+
+| Panel | Meaning |
+|---|---|
+| Breach Risk gauge | chance the attacker reaches the domain controller or database from where they are now; also shows where the attacker is, hops so far (of 3) and model confidence |
+| Next-Hop Forecast | the five machines most likely to be hit next, with probabilities. "Calibrated · T=1.01": when it says 30%, it is right about 30% of the time |
+| Top Attack Paths | the five most likely full routes to the critical servers. Each probability becomes a distance (−log p), so the shortest path is the most likely one; Yen's algorithm finds the top five |
+| Countermeasure | the one recommended fix, with the risk it removes and the share of normal traffic it blocks (under 1%). Below it, the heavier containment option: isolate the whole PC, more risk removed, 4–8% of normal traffic blocked |
+| Live Telemetry | incoming logins and each module's output as the attack moves |
+
+Risk on the gauge: 41% at C2, 68% at C111, 87% at C57. With the countermeasure deployed at C57 it falls
+to 37%, and once the hop bounces off the shield (ATTACK CONTAINED) it reads 12%.
+
+### 3. Event Stream: why ordinary tools miss it
+
+| Column | Meaning |
+|---|---|
+| Unexpected (single-event) | how strange that one login looks on its own |
+| Forecast rank | where the destination sat in the model's next-hop forecast |
+| Severity | Lateralis's flag |
+| Truth | whether the login was really the attack (shown after REVEAL ATTACK) |
+
+The point: the attack logins score as normal on their own, because they use real stolen passwords on
+everyday routes. They are flagged because they leave a compromised machine and land where the model
+predicted. All three attack logins are flagged.
+
+### 4. Model Intel: the real numbers (`results/eval_synthetic.json`)
+
+| Tile | Value | Plain meaning |
+|---|---|---|
+| Link forecast AUC | 0.970 | tells real future logins from ones that won't happen 97% of the time (0.5 = coin flip) |
+| Next hop in top-5 | 70% | the real next machine is in the top five guesses (random: 9%) |
+| Top-1 lift vs random | ~12.7× | the single best guess against random guessing |
+| Caught before target | 73% | attacks flagged before reaching a critical server (rule-based: 56%) |
+| Risk cut by containment | 51% | isolating the compromised PC removes about half the risk |
+| Normal traffic blocked | 0.27% | what the recommended next cut costs in normal work |
+
+Charts: next-hop accuracy over 196 predictions on 45 unseen networks (GNN vs rule-based vs random; the
+GNN wins every metric); the training run (145,666 parameters, early stop at epoch 19); the head-to-head
+table; the defense trade-off (next cut is cheap, containment is strong: contain first, then cut); and
+calibration error, 0.095 for the GNN vs 0.198 for rules.
+
+### 5. Pipeline: how it works (click a stage)
+
+1. **Ingest**: login logs (time, user, source, destination), LANL 2015 format.
+2. **Graph**: hourly snapshots; the network becomes a movie, not a photo.
+3. **Embed**: two graph attention (GAT) layers; each machine weighs its important neighbours.
+4. **Remember**: a GRU carries each machine's state across hours and notices new movement.
+5. **Predict**: score every candidate login; a softmax over the compromised machine's neighbours gives the next hop.
+6. **Calibrate**: temperature scaling keeps the percentages honest.
+7. **Rank**: Yen's algorithm on −log p for the top-5 full routes.
+8. **Defend**: simulate each action (isolate, revoke, block); score = risk removed − λ × normal traffic blocked; recommend the best.
+
+### Hard questions
+
+- **Why a graph neural network?** Attacks are about connections between machines, and the network
+  changes every hour: GAT handles the connections, the GRU handles time.
+- **Why not rules or anomaly detection?** The attacker uses valid stolen passwords, so each login looks
+  normal (Event Stream), and the GNN beats the rule-based baseline on every metric.
+- **Is the data real?** Synthetic networks in the real LANL 2015 log format; retraining on LANL and
+  DARPA OpTC is next.
+- **Weak spot?** Guessing the whole path exactly is hard (in the top five about 17% of the time), which
+  is why Lateralis acts on the next hop (70%) and cuts there.
+
 ## Script
 
 **Start on the website (1 min).** Open `index.html`. Point at the 3D network in the hero: the intruder
