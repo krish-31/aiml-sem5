@@ -5,10 +5,13 @@ Two pages, both open with a double-click (no install, no server):
 - `demo/index.html`: the **website** (what Lateralis is, how it works, download and setup). Plain
   language, no metrics, for a first-time audience.
 - `demo/simulation.html`: the **simulation** (attack replay, event stream, results, pipeline).
-  Linked from the website ("Try the simulation") and back again with **← HOME**.
+  Linked from the website ("Watch a simulated attack") and back again with **← HOME**.
 
 Or serve the folder: `python -m http.server 8080` → http://localhost:8080/demo/
 Press **F** in the simulation for fullscreen.
+
+The website's 3D network loads three.js and GSAP from cdnjs, so it needs internet. Offline (or on a
+phone, or with reduced motion on) it shows a still picture of the same network instead.
 
 ## Controls
 
