@@ -28,9 +28,11 @@ Open `simulation.html#skip` to jump straight past the boot screen.
 
 ## Script
 
-**Start on the website (1 min).** Open `index.html`. Scroll once through it: the hero animation (intruder
-hops, gets blocked), "The problem", "How it works" in three steps, the four AI assistants, and the
-install section (switch Windows/macOS tabs, show a Copy button). Then click **Try the simulation**.
+**Start on the website (1 min).** Open `index.html`. Point at the 3D network in the hero: the intruder
+moves laptop → server → server, the domain controller lights up as the next target, and a shield blocks
+the last step (move the mouse over it to turn the network). Scroll once: the alerts window, setup in 3
+steps, the statement that lights up word by word, the assistants, the install window (switch the
+Windows / macOS tabs, press a Copy button), the questions. Then click **Watch a simulated attack**.
 
 **0. Boot (15 s).** Let the boot log run, press Enter.
 > "This is Lateralis: it forecasts where a hacker moves next inside a company network, and cuts them off."
